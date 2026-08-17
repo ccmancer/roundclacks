@@ -23,10 +23,20 @@ class Game:
             "blue",
             375
         )
+        Game.bullets = []
     def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    self.bullets.append(
+                        self.player1.weapon.attack()
+                    )
+                if event.key == pygame.K_RETURN:
+                    self.bullets.append(
+                        self.player2.weapon.attack()
+                    )
     def update(self):
         self.player1.update(
             self.dt,
@@ -38,12 +48,22 @@ class Game:
             self.screen.get_width(),
             self.screen.get_height()
         )
+        for bullet in self.bullets:
+            bullet.update(self.dt)
         if check_circle_collision(self.player1, self.player2):
-            resolve_circle_collision(self.player1, self.player2)
+            resolve_circle_collision(
+                self.player1,
+                self.player2
+            )
     def draw(self):
         self.screen.fill("white")
+
         self.player1.draw(self.screen)
         self.player2.draw(self.screen)
+
+        for bullet in self.bullets:
+            bullet.draw(self.screen)
+
         pygame.display.flip()
     def run(self):
         while self.running:

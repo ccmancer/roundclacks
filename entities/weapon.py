@@ -1,5 +1,6 @@
 import pygame
 import math
+from entities.bullet import Bullet
 
 class Weapon:
     def __init__(self, player, distance, rotation_speed):
@@ -10,17 +11,13 @@ class Weapon:
         self.position = pygame.Vector2()
     def update(self, dt):
         self.angle += self.rotation_speed * dt
-        self.position.x = (
-            self.player.position.x
-            + math.cos(self.angle) * self.distance
-        )
-        self.position.y = (
-            self.player.position.y
-            + math.sin(self.angle) * self.distance
-        )
         self.direction = pygame.Vector2(
             math.cos(self.angle),
             math.sin(self.angle)
+        )
+        self.position = (
+            self.player.position
+            + self.direction * self.distance
         )
     def draw(self, screen):
         pygame.draw.circle(
@@ -28,4 +25,12 @@ class Weapon:
             "black",
             self.position,
             10
+        )
+    def attack(self):
+        return Bullet(
+            self.position,
+            self.direction,
+            600,
+            8,
+            self.player.color
         )
