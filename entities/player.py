@@ -10,6 +10,7 @@ class Player:
         self.velocity.from_polar((speed, angle))
         self.radius = radius
         self.color = color
+        self.health = 100
         self.weapon = Weapon(
             self,
             70,
@@ -38,3 +39,5 @@ class Player:
             self.radius
         )
         self.weapon.draw(screen)
+    def take_damage(self, damage):
+        self.health -= damage

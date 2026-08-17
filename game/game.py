@@ -1,6 +1,10 @@
 import pygame
 from entities.player import Player
-from physics.collision import check_circle_collision, resolve_circle_collision
+from physics.collision import (
+    check_circle_collision,
+    resolve_circle_collision,
+    check_bullet_player_collision
+)
 
 class Game:
     def __init__(self):
@@ -56,6 +60,15 @@ class Game:
                 self.screen.get_height()
             ):
                 self.bullets.remove(bullet)
+                continue
+            if check_bullet_player_collision(bullet, self.player1):
+                self.player1.take_damage(bullet.damage)
+                self.bullets.remove(bullet)
+                print(self.player1.health)
+            if check_bullet_player_collision(bullet, self.player2):
+                self.player2.take_damage(bullet.damage)
+                self.bullets.remove(bullet)
+                print(self.player2.health)  
         if check_circle_collision(self.player1, self.player2):
             resolve_circle_collision(
                 self.player1,

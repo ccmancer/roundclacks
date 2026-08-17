@@ -10,3 +10,6 @@ def resolve_circle_collision(player1, player2):
     speed2 = player2.velocity.length()
     player1.velocity = -normal * speed1
     player2.velocity = normal * speed2
+def check_bullet_player_collision(bullet, player):
+    distance = bullet.position.distance_to(player.position)
+    return distance <= bullet.radius + player.radius

@@ -32,5 +32,7 @@ class Weapon:
             self.direction,
             600,
             8,
-            self.player.color
+            self.player.color,
+            self.player,
+            20
         )
