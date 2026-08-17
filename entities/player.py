@@ -1,5 +1,6 @@
 import pygame
 import random
+from entities.weapon import Weapon
 
 class Player:
     def __init__(self, x, y, radius, color, speed):
@@ -9,6 +10,11 @@ class Player:
         self.velocity.from_polar((speed, angle))
         self.radius = radius
         self.color = color
+        self.weapon = Weapon(
+            self,
+            70,
+            3
+        )       
     def update(self, dt, width, height):
         self.position += self.velocity * dt
         if self.position.x - self.radius <= 0 and self.velocity.x < 0:
@@ -23,6 +29,7 @@ class Player:
         elif self.position.y + self.radius >= height and self.velocity.y > 0:
             self.position.y = height - self.radius
             self.velocity.y *= -1
+        self.weapon.update(dt)
     def draw(self, screen):
         pygame.draw.circle(
             screen,
@@ -30,3 +37,4 @@ class Player:
             self.position,
             self.radius
         )
+        self.weapon.draw(screen)
