@@ -48,8 +48,14 @@ class Game:
             self.screen.get_width(),
             self.screen.get_height()
         )
-        for bullet in self.bullets:
+        for bullet in self.bullets[:]:
             bullet.update(self.dt)
+
+            if bullet.is_out_of_bounds(
+                self.screen.get_width(),
+                self.screen.get_height()
+            ):
+                self.bullets.remove(bullet)
         if check_circle_collision(self.player1, self.player2):
             resolve_circle_collision(
                 self.player1,

@@ -9,6 +9,13 @@ class Bullet:
         self.color = color
     def update(self, dt):
         self.position += self.velocity * dt
+    def is_out_of_bounds(self, width, height):
+        return (
+            self.position.x < 0
+            or self.position.x > width
+            or self.position.y < 0
+            or self.position.y > height
+        )
     def draw(self, screen):
         pygame.draw.circle(
             screen,
