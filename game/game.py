@@ -74,6 +74,13 @@ class Game:
                 self.player1,
                 self.player2
             )
+        if not self.player1.is_alive():
+            print("Player 2 wins!")
+            self.running = False
+
+        elif not self.player2.is_alive():
+            print("Player 1 wins!")
+            self.running = False
     def draw(self):
         self.screen.fill("white")
 

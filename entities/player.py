@@ -41,3 +41,5 @@ class Player:
         self.weapon.draw(screen)
     def take_damage(self, damage):
         self.health -= damage
+    def is_alive(self):
+        return self.health > 0
