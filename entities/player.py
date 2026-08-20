@@ -1,6 +1,7 @@
 import pygame
 import random
-from entities.gun import Gun
+from weapons.bow import Bow
+from weapons.sword import Sword
 
 
 class Player:
@@ -13,7 +14,7 @@ class Player:
 
         self.reset_velocity(speed)
 
-        self.weapon = Gun(self)
+        self.weapon = Sword(self)
 
     def update(self, dt, width, height):
         self.position += self.velocity * dt

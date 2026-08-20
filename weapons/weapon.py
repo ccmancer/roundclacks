@@ -44,28 +44,13 @@ class Weapon:
         )
 
     def draw(self, screen):
-        pygame.draw.circle(
-            screen,
-            "black",
-            self.position,
-            10
-        )
+        pass
 
     def get_damage(self):
-        damage = self.base_damage
-
-        for upgrade in self.upgrades:
-            damage *= upgrade.damage_multiplier
-
-        return damage
+        return self.base_damage
 
     def get_attack_cooldown(self):
-        cooldown = self.base_cooldown
-
-        for upgrade in self.upgrades:
-            cooldown *= upgrade.cooldown_multiplier
-
-        return cooldown
+        return self.base_cooldown
 
     def can_attack(self):
         return self.cooldown_timer <= 0
@@ -75,3 +60,14 @@ class Weapon:
 
     def attack(self):
         raise NotImplementedError
+
+    def handle_collision(self, opponent):
+        pass
+
+    def add_upgrade(self, upgrade):
+        for existing_upgrade in self.upgrades:
+            if existing_upgrade.name == upgrade.name:
+                existing_upgrade.stacks += 1
+                return
+
+        self.upgrades.append(upgrade)

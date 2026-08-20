@@ -4,9 +4,11 @@ from entities.player import Player
 from physics.collision import (
     check_circle_collision,
     resolve_circle_collision,
-    check_bullet_player_collision
+    check_bullet_player_collision,
+    check_sword_player_collision
 )
 from game.round import RoundManager
+from weapons.sword import Sword
 
 
 class Game:
@@ -62,13 +64,16 @@ class Game:
         )
         keys = pygame.key.get_pressed()
         if keys[pygame.K_SPACE]:
-            bullet = self.player1.weapon.attack()
-            if bullet is not None:
-                self.bullets.append(bullet)
+            result = self.player1.weapon.attack()
+
+            if result is not None:
+                self.bullets.append(result)
+
         if keys[pygame.K_RETURN]:
-            bullet = self.player2.weapon.attack()
-            if bullet is not None:
-                self.bullets.append(bullet)
+            result = self.player2.weapon.attack()
+
+            if result is not None:
+                self.bullets.append(result)
         for bullet in self.bullets[:]:
             bullet.update(self.dt)
             if bullet.is_out_of_bounds(
@@ -93,6 +98,33 @@ class Game:
                 self.bullets.remove(bullet)
                 print(self.player2.health)
                 continue
+        if isinstance(self.player1.weapon, Sword):
+            if (
+                check_sword_player_collision(
+                    self.player1.weapon,
+                    self.player2
+                )
+                and self.player1.weapon.can_hit()
+            ):
+                self.player2.take_damage(
+                    self.player1.weapon.get_damage()
+                )
+
+                self.player1.weapon.hit()
+
+        if isinstance(self.player2.weapon, Sword):
+            if (
+                check_sword_player_collision(
+                    self.player2.weapon,
+                    self.player1
+                )
+                and self.player2.weapon.can_hit()
+            ):
+                self.player1.take_damage(
+                    self.player2.weapon.get_damage()
+                )
+
+                self.player2.weapon.hit()
         if check_circle_collision(
             self.player1,
             self.player2
@@ -125,7 +157,7 @@ class Game:
 
         loser = self.round_manager.loser
 
-        loser.weapon.upgrades.append(upgrade)
+        loser.weapon.add_upgrade(upgrade)
 
         print(
             loser.color,
