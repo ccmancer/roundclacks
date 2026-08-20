@@ -3,7 +3,7 @@ import math
 
 from weapons.weapon import Weapon
 from game.upgrade_pool import SWORD_UPGRADES
-
+from entities.magic_slash import MagicSlash
 
 class Sword(Weapon):
     def __init__(self, player):
@@ -119,6 +119,9 @@ class Sword(Weapon):
                     * 2
                 )
 
+            elif upgrade.name == "Hero":
+                damage *= 1.5 ** upgrade.stacks
+
         return damage
 
     def get_length(self):
@@ -154,6 +157,15 @@ class Sword(Weapon):
 
         return speed
 
+    def get_cooldown(self):
+        cooldown = self.base_cooldown
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Hero":
+                cooldown *= 0.5 ** upgrade.stacks
+
+        return cooldown
+
     def get_attack_rotation_speed(self):
         speed = self.base_attack_rotation_speed
 
@@ -186,14 +198,32 @@ class Sword(Weapon):
 
     def attack(self):
         if not self.can_attack():
-            return False
+            return []
 
         self.start_cooldown()
 
         self.attacking = True
         self.attack_angle = 0
 
-        return True
+        projectiles = []
+
+        hero_stacks = self.get_hero_stacks()
+        spread = math.radians(10)
+
+        for i in range(hero_stacks):
+            offset = (i - (hero_stacks - 1) / 2) * spread
+
+            direction = self.direction.rotate_rad(offset)
+
+            projectiles.append(
+                MagicSlash(
+                    self.player.position,
+                    direction,
+                    self.get_damage(),
+                    self.player
+                )
+            )
+        return projectiles
 
     def get_vortex_force(self):
         force = 0
@@ -258,3 +288,19 @@ class Sword(Weapon):
 
         # +10% spin speed for 5 seconds
         self.beyblade_buffs.append(5.0)
+
+    def get_hero_stacks(self):
+        stacks = 0
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Hero":
+                stacks += upgrade.stacks
+
+        return stacks
+
+    def reset(self):
+        super().reset()
+
+        self.attacking = False
+        self.attack_angle = 0
+        self.hit_angle = self.hit_angle_cooldown

@@ -94,3 +94,7 @@ class Weapon:
                 force += 300 * upgrade.stacks
 
         return force
+
+    def reset(self):
+        self.cooldown_timer = 0
+        self.angle = random.uniform(0, math.tau)

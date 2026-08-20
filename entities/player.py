@@ -79,7 +79,7 @@ class Player:
 
     def is_alive(self):
         return self.health > 0
-
+    
     def reset(self, position):
         self.position = pygame.Vector2(position)
 
@@ -87,6 +87,7 @@ class Player:
         self.health = self.max_health
 
         self.reset_velocity(self.speed)
+        self.weapon.reset()
 
         # Clear any temporary movement effects
         self.external_velocity = pygame.Vector2()

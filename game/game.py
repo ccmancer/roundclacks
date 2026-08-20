@@ -4,7 +4,7 @@ from entities.player import Player
 from physics.collision import (
     check_circle_collision,
     resolve_circle_collision,
-    check_bullet_player_collision,
+    check_projectile_player_collision,
     check_sword_player_collision
 )
 from game.round import RoundManager
@@ -36,14 +36,15 @@ class Game:
             self.player1,
             self.player2
         )
-        self.bullets = []
+        self.projectiles = []
         self.player1.weapon.add_upgrade(
             next(
                 upgrade
                 for upgrade in self.player1.weapon.upgrade_pool
-                if upgrade.name == "Beyblade"
+                if upgrade.name == "Hero"
             )
         )
+        
     def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -71,44 +72,50 @@ class Game:
         )
         keys = pygame.key.get_pressed()
         if keys[pygame.K_SPACE]:
-            attacked = self.player1.weapon.attack()
+            projectiles = self.player1.weapon.attack()
 
-            if attacked:
+            if projectiles:
+                self.projectiles.extend(projectiles)
+
                 self.apply_step_in(
                     self.player1,
                     self.player2
                 )
-        if keys[pygame.K_RETURN]:
-            attacked = self.player2.weapon.attack()
 
-            if attacked:
+        if keys[pygame.K_RETURN]:
+            projectiles = self.player2.weapon.attack()
+
+            if projectiles:
+                self.projectiles.extend(projectiles)
+
                 self.apply_step_in(
                     self.player2,
                     self.player1
                 )
-        for bullet in self.bullets[:]:
-            bullet.update(self.dt)
-            if bullet.is_out_of_bounds(
+        for projectile in self.projectiles[:]:
+            projectile.update(self.dt)
+
+            if projectile.is_out_of_bounds(
                 self.screen.get_width(),
                 self.screen.get_height()
             ):
-                self.bullets.remove(bullet)
+                self.projectiles.remove(projectile)
                 continue
-            if check_bullet_player_collision(
-                bullet,
+
+            if check_projectile_player_collision(
+                projectile,
                 self.player1
             ):
-                self.player1.take_damage(bullet.damage)
-                self.bullets.remove(bullet)
-                print(self.player1.health)
+                self.player1.take_damage(projectile.damage)
+                self.projectiles.remove(projectile)
                 continue
-            if check_bullet_player_collision(
-                bullet,
+
+            if check_projectile_player_collision(
+                projectile,
                 self.player2
             ):
-                self.player2.take_damage(bullet.damage)
-                self.bullets.remove(bullet)
-                print(self.player2.health)
+                self.player2.take_damage(projectile.damage)
+                self.projectiles.remove(projectile)
                 continue
         if isinstance(self.player1.weapon, Sword):
             if (
@@ -195,7 +202,7 @@ class Game:
         if self.round_manager.state == "fighting":
             self.player1.draw(self.screen)
             self.player2.draw(self.screen)
-            for bullet in self.bullets:
+            for bullet in self.projectiles:
                 bullet.draw(self.screen)
         elif self.round_manager.state == "upgrade_selection":
             self.draw_upgrade_selection()
@@ -226,7 +233,7 @@ class Game:
             loser.get_max_health()
         )
 
-        self.bullets.clear()
+        self.projectiles.clear()
 
         self.round_manager.reset_round()
         self.round_manager.state = "fighting"

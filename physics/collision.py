@@ -51,3 +51,10 @@ def closest_point_on_segment(point, start, end):
     t = max(0, min(1, t))
 
     return start + segment * t
+def check_projectile_player_collision(projectile, player):
+    if projectile.owner == player:
+        return False
+
+    distance = projectile.position.distance_to(player.position)
+
+    return distance <= projectile.radius + player.get_radius()
