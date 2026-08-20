@@ -1,6 +1,7 @@
 import random
 from game.upgrade import Upgrade
 
+
 RARITY_WEIGHTS = {
     "common": 9,
     "rare": 3,
@@ -27,7 +28,14 @@ def generate_upgrade_choices(upgrades, amount=3):
     while len(choices) < amount and available_upgrades:
         upgrade = get_random_upgrade(available_upgrades)
 
-        choices.append(upgrade)
+        choices.append(
+            Upgrade(
+                upgrade.name,
+                upgrade.rarity,
+                upgrade.description
+            )
+        )
+
         available_upgrades.remove(upgrade)
 
     return choices

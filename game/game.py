@@ -37,6 +37,13 @@ class Game:
             self.player2
         )
         self.bullets = []
+        self.player1.weapon.add_upgrade(
+            next(
+                upgrade
+                for upgrade in self.player1.weapon.upgrade_pool
+                if upgrade.name == "Beyblade"
+            )
+        )
     def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -64,16 +71,21 @@ class Game:
         )
         keys = pygame.key.get_pressed()
         if keys[pygame.K_SPACE]:
-            result = self.player1.weapon.attack()
+            attacked = self.player1.weapon.attack()
 
-            if result is not None:
-                self.bullets.append(result)
-
+            if attacked:
+                self.apply_step_in(
+                    self.player1,
+                    self.player2
+                )
         if keys[pygame.K_RETURN]:
-            result = self.player2.weapon.attack()
+            attacked = self.player2.weapon.attack()
 
-            if result is not None:
-                self.bullets.append(result)
+            if attacked:
+                self.apply_step_in(
+                    self.player2,
+                    self.player1
+                )
         for bullet in self.bullets[:]:
             bullet.update(self.dt)
             if bullet.is_out_of_bounds(
@@ -106,12 +118,33 @@ class Game:
                 )
                 and self.player1.weapon.can_hit()
             ):
-                self.player2.take_damage(
-                    self.player1.weapon.get_damage()
-                )
+                damage = self.player1.weapon.get_hit_damage()
+
+                self.player2.take_damage(damage)
+
+                lifesteal = self.player1.weapon.get_lifesteal()
+
+                if lifesteal > 0:
+                    self.player1.heal(damage * lifesteal)
+
+                self.player1.weapon.trigger_beyblade()
+
+
+                vortex_force = self.player1.weapon.get_vortex_force()
+
+                if vortex_force > 0:
+                    direction = (
+                        self.player1.position
+                        - self.player2.position
+                    )
+
+                    self.player2.apply_force(
+                        direction,
+                        vortex_force,
+                        0.15
+                    )
 
                 self.player1.weapon.hit()
-
         if isinstance(self.player2.weapon, Sword):
             if (
                 check_sword_player_collision(
@@ -120,9 +153,31 @@ class Game:
                 )
                 and self.player2.weapon.can_hit()
             ):
-                self.player1.take_damage(
-                    self.player2.weapon.get_damage()
-                )
+                damage = self.player2.weapon.get_hit_damage()
+
+                self.player1.take_damage(damage)
+
+                lifesteal = self.player2.weapon.get_lifesteal()
+
+                if lifesteal > 0:
+                    self.player2.heal(damage * lifesteal)
+
+                self.player2.weapon.trigger_beyblade()
+
+
+                vortex_force = self.player2.weapon.get_vortex_force()
+
+                if vortex_force > 0:
+                    direction = (
+                        self.player2.position
+                        - self.player1.position
+                    )
+
+                    self.player1.apply_force(
+                        direction,
+                        vortex_force,
+                        0.15
+                    )
 
                 self.player2.weapon.hit()
         if check_circle_collision(
@@ -163,6 +218,12 @@ class Game:
             loser.color,
             "selected",
             upgrade.name
+        )
+        print(
+            loser.color,
+            loser.weapon.upgrades[-1].name,
+            "max health:",
+            loser.get_max_health()
         )
 
         self.bullets.clear()
@@ -218,4 +279,17 @@ class Game:
                 self.screen.get_width() // 2 - loser_text.get_width() // 2,
                 30
             )
+        )
+    def apply_step_in(self, player, opponent):
+        force = player.weapon.get_step_force()
+
+        if force <= 0:
+            return
+
+        direction = opponent.position - player.position
+
+        player.apply_force(
+            direction,
+            force,
+            0.15
         )

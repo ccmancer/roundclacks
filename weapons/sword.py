@@ -4,12 +4,6 @@ import math
 from weapons.weapon import Weapon
 from game.upgrade_pool import SWORD_UPGRADES
 
-import pygame
-import math
-
-from weapons.weapon import Weapon
-from game.upgrade_pool import SWORD_UPGRADES
-
 
 class Sword(Weapon):
     def __init__(self, player):
@@ -24,8 +18,12 @@ class Sword(Weapon):
         self.base_length = 140
         self.width = 12
 
-        self.hit_cooldown = 0.25
-        self.hit_timer = 0
+        # Hit cooldown is based on degrees traveled
+        self.hit_angle_cooldown = math.radians(60)
+        self.hit_angle = self.hit_angle_cooldown
+
+        # Beyblade temporary speed buffs
+        self.beyblade_buffs = []
 
         self.attacking = False
         self.attack_angle = 0
@@ -35,21 +33,33 @@ class Sword(Weapon):
         self.upgrade_pool = SWORD_UPGRADES
 
     def update(self, dt):
-        if self.hit_timer > 0:
-            self.hit_timer -= dt
-
+        # Weapon attack cooldown
         if self.cooldown_timer > 0:
             self.cooldown_timer -= dt
 
-        if self.attacking:
-            self.angle += self.get_attack_rotation_speed() * dt
-            self.attack_angle += self.get_attack_rotation_speed() * dt
+        # Remove expired Beyblade buffs
+        self.beyblade_buffs = [
+            timer - dt
+            for timer in self.beyblade_buffs
+            if timer - dt > 0
+        ]
 
-            if self.attack_angle >= math.tau:
+        if self.attacking:
+            rotation_speed = self.get_attack_rotation_speed()
+
+            self.angle += rotation_speed * dt
+            self.attack_angle += rotation_speed * dt
+            self.hit_angle += rotation_speed * dt
+
+            if self.attack_angle >= self.get_attack_total_angle():
                 self.attacking = False
                 self.attack_angle = 0
+
         else:
-            self.angle += self.get_rotation_speed() * dt
+            rotation_speed = self.get_rotation_speed()
+
+            self.angle += rotation_speed * dt
+            self.hit_angle += rotation_speed * dt
 
         self.direction = pygame.Vector2(
             math.cos(self.angle),
@@ -62,20 +72,33 @@ class Sword(Weapon):
         )
 
     def draw(self, screen):
-        start = self.player.position
+        blade_count = self.get_blade_count()
 
-        end = (
-            self.player.position
-            + self.direction * self.get_length()
-        )
+        for i in range(blade_count):
+            angle = (
+                self.angle
+                + (math.tau / blade_count) * i
+            )
 
-        pygame.draw.line(
-            screen,
-            "black",
-            start,
-            end,
-            self.width
-        )
+            direction = pygame.Vector2(
+                math.cos(angle),
+                math.sin(angle)
+            )
+
+            start = self.player.position
+
+            end = (
+                self.player.position
+                + direction * self.get_length()
+            )
+
+            pygame.draw.line(
+                screen,
+                "black",
+                start,
+                end,
+                self.width
+            )
 
     def get_damage(self):
         damage = self.base_damage
@@ -84,6 +107,18 @@ class Sword(Weapon):
             if upgrade.name == "Sharpness":
                 damage *= 1.25 ** upgrade.stacks
 
+            elif upgrade.name == "Greatsword":
+                damage *= 1.5 ** upgrade.stacks
+
+            elif upgrade.name == "Rage":
+                missing_health = 1 - self.player.get_health_ratio()
+                damage *= (
+                    1
+                    + missing_health
+                    * upgrade.stacks
+                    * 2
+                )
+
         return damage
 
     def get_length(self):
@@ -91,6 +126,12 @@ class Sword(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Longsword":
+                length *= 1.5 ** upgrade.stacks
+
+            elif upgrade.name == "Greatsword":
+                length *= 1.5 ** upgrade.stacks
+
+            elif upgrade.name == "Juggernaut":
                 length *= 1.5 ** upgrade.stacks
 
         return length
@@ -102,6 +143,15 @@ class Sword(Weapon):
             if upgrade.name == "Trained":
                 speed *= 1.5 ** upgrade.stacks
 
+            elif upgrade.name == "Greatsword":
+                speed *= 0.75 ** upgrade.stacks
+
+        # Beyblade temporary buffs
+        beyblade_stacks = len(self.beyblade_buffs)
+
+        if beyblade_stacks > 0:
+            speed *= 1.10 ** beyblade_stacks
+
         return speed
 
     def get_attack_rotation_speed(self):
@@ -111,19 +161,100 @@ class Sword(Weapon):
             if upgrade.name == "Trained":
                 speed *= 1.5 ** upgrade.stacks
 
+            elif upgrade.name == "Double Spin":
+                speed *= 1.5 ** upgrade.stacks
+
+            elif upgrade.name == "Greatsword":
+                speed *= 0.75 ** upgrade.stacks
+
         return speed
 
+    def get_attack_total_angle(self):
+        spins = 1
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Double Spin":
+                spins += upgrade.stacks
+
+        return math.tau * spins
+
     def can_hit(self):
-        return self.hit_timer <= 0
+        return self.hit_angle >= self.hit_angle_cooldown
 
     def hit(self):
-        self.hit_timer = self.hit_cooldown
+        self.hit_angle = 0
 
     def attack(self):
         if not self.can_attack():
-            return
+            return False
 
         self.start_cooldown()
 
         self.attacking = True
         self.attack_angle = 0
+
+        return True
+
+    def get_vortex_force(self):
+        force = 0
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Vortex":
+                force += 150 * upgrade.stacks
+
+        return force
+
+    def get_lifesteal(self):
+        lifesteal = 0
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Bloodlust":
+                lifesteal += 0.50 * upgrade.stacks
+
+        return lifesteal
+
+    def get_blade_count(self):
+        count = 1
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Dual Wielder":
+                count += upgrade.stacks
+
+        return count
+
+    def get_blade_directions(self):
+        blade_count = self.get_blade_count()
+
+        directions = []
+
+        for i in range(blade_count):
+            angle = (
+                self.angle
+                + (math.tau / blade_count) * i
+            )
+
+            direction = pygame.Vector2(
+                math.cos(angle),
+                math.sin(angle)
+            )
+
+            directions.append(direction)
+
+        return directions
+
+    def trigger_beyblade(self):
+        has_beyblade = False
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Beyblade":
+                has_beyblade = True
+                break
+
+        if not has_beyblade:
+            return
+
+        # Immediately refresh attack cooldown
+        self.cooldown_timer = 0
+
+        # +10% spin speed for 5 seconds
+        self.beyblade_buffs.append(5.0)

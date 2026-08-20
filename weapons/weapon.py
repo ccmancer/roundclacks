@@ -1,6 +1,6 @@
 import pygame
 import math
-
+import random
 
 class Weapon:
     def __init__(
@@ -71,3 +71,26 @@ class Weapon:
                 return
 
         self.upgrades.append(upgrade)
+
+    def get_hit_damage(self):
+        damage = self.get_damage()
+
+        critical_chance = 0
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Critical":
+                critical_chance += 0.20 * upgrade.stacks
+
+        if random.random() < critical_chance:
+            return damage * 3
+
+        return damage
+
+    def get_step_force(self):
+        force = 0
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Step-in":
+                force += 300 * upgrade.stacks
+
+        return force
