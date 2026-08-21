@@ -1,52 +1,96 @@
-from entities.bullet import Bullet
-from weapons.weapon import Weapon
+import pygame
 
+from weapons.weapon import Weapon
+from entities.arrow import Arrow
 from game.upgrade_pool import BOW_UPGRADES
+
 
 class Bow(Weapon):
     def __init__(self, player):
         super().__init__(
             player,
-            70,     # orbit distance
+            50,    # orbit distance
             3,      # rotation speed
-            20,     # base damage
-            0.5     # base cooldown
+            25,     # base damage
+            0.75    # base cooldown
         )
-        self.base_projectile_speed = 500
+
         self.upgrade_pool = BOW_UPGRADES
 
-    def get_projectile_speed(self):
-        speed = self.base_projectile_speed
+    def draw(self, screen):
+        direction = self.direction.normalize()
 
-        for upgrade in self.upgrades:
-            speed *= upgrade.projectile_speed_multiplier
+        # Perpendicular to the bow direction
+        perpendicular = pygame.Vector2(
+            -direction.y,
+            direction.x
+        )
 
-        return speed
+        # Bow dimensions
+        bow_length = 70
+        bow_curve = 20
+
+        center = self.position
+
+        # Endpoints of the bow
+        top = center + perpendicular * (bow_length / 2)
+        bottom = center - perpendicular * (bow_length / 2)
+
+        # Bow curves away from the firing direction
+        curve = center + direction * bow_curve
+
+        # Draw the curved bow using several line segments
+        points = []
+
+        for i in range(11):
+            t = i / 10
+
+            point = (
+                (1 - t) ** 2 * top
+                + 2 * (1 - t) * t * curve
+                + t ** 2 * bottom
+            )
+
+            points.append(point)
+
+        pygame.draw.lines(
+            screen,
+            "brown",
+            False,
+            points,
+            8
+        )
+
+        # Draw the bow string
+        pygame.draw.line(
+            screen,
+            "black",
+            top,
+            bottom,
+            2
+        )
 
     def attack(self):
         if not self.can_attack():
-            return None
+            return []
 
         self.start_cooldown()
 
-        return Bullet(
-            self.position,
-            self.direction,
-            self.get_projectile_speed(),
-            8,
-            self.player.color,
-            self.player,
-            self.get_damage()
-        )
+        return [
+            Arrow(
+                self.position,
+                self.direction,
+                self.get_damage(),
+                self.player,
+                self.get_projectile_speed()
+            )
+        ]
 
-    def draw(self, screen):
-        super().draw(screen)
+    def get_projectile_speed(self):
+        speed = 500
 
-        import pygame
+        for upgrade in self.upgrades:
+            if upgrade.name == "Aerodynamic":
+                speed *= 2 ** upgrade.stacks
 
-        pygame.draw.circle(
-            screen,
-            "black",
-            self.position,
-            10
-        )
+        return speed

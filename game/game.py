@@ -41,7 +41,7 @@ class Game:
             next(
                 upgrade
                 for upgrade in self.player1.weapon.upgrade_pool
-                if upgrade.name == "Hero"
+                if upgrade.name == "Aerodynamic"
             )
         )
         

@@ -2,7 +2,7 @@ import pygame
 import random
 
 from weapons.sword import Sword
-
+from weapons.bow import Bow
 
 class Player:
     def __init__(self, x, y, radius, color, speed):
@@ -11,7 +11,7 @@ class Player:
         self.color = color
         self.speed = speed
 
-        self.weapon = Sword(self)
+        self.weapon = Bow(self)
 
         self.base_max_health = 100
         self.max_health = self.get_max_health()
