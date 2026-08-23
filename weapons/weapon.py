@@ -2,6 +2,9 @@ import pygame
 import math
 import random
 
+from upgrades.upgrade import Upgrade
+
+
 class Weapon:
     def __init__(
         self,
@@ -9,7 +12,8 @@ class Weapon:
         distance,
         rotation_speed,
         base_damage,
-        base_cooldown
+        base_cooldown,
+        melee
     ):
         self.player = player
 
@@ -18,6 +22,7 @@ class Weapon:
 
         self.base_damage = base_damage
         self.base_cooldown = base_cooldown
+        self.melee = melee
 
         self.upgrades = []
 
@@ -70,31 +75,17 @@ class Weapon:
                 existing_upgrade.stacks += 1
                 return
 
-        self.upgrades.append(upgrade)
-
-    def get_hit_damage(self):
-        damage = self.get_damage()
-
-        critical_chance = 0
-
-        for upgrade in self.upgrades:
-            if upgrade.name == "Critical":
-                critical_chance += 0.20 * upgrade.stacks
-
-        if random.random() < critical_chance:
-            return damage * 3
-
-        return damage
-
-    def get_step_force(self):
-        force = 0
-
-        for upgrade in self.upgrades:
-            if upgrade.name == "Step-in":
-                force += 300 * upgrade.stacks
-
-        return force
+        self.upgrades.append(
+            Upgrade(
+                upgrade.name,
+                upgrade.rarity,
+                upgrade.description
+            )
+        )
 
     def reset(self):
         self.cooldown_timer = 0
         self.angle = random.uniform(0, math.tau)
+
+    def on_death(self):
+        return []

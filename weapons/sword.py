@@ -2,7 +2,7 @@ import pygame
 import math
 
 from weapons.weapon import Weapon
-from game.upgrade_pool import SWORD_UPGRADES
+from upgrades.upgrade_pool import SWORD_UPGRADES
 from entities.magic_slash import MagicSlash
 
 class Sword(Weapon):
@@ -11,8 +11,9 @@ class Sword(Weapon):
             player,
             100,    # orbit distance
             3,      # base rotation speed
-            30,     # base damage
-            1.0     # base cooldown
+            20,     # base damage
+            1.0,     # base cooldown
+            True
         )
 
         self.base_length = 140
@@ -149,15 +150,9 @@ class Sword(Weapon):
             elif upgrade.name == "Greatsword":
                 speed *= 0.75 ** upgrade.stacks
 
-        # Beyblade temporary buffs
-        beyblade_stacks = len(self.beyblade_buffs)
-
-        if beyblade_stacks > 0:
-            speed *= 1.10 ** beyblade_stacks
-
         return speed
 
-    def get_cooldown(self):
+    def get_attack_cooldown(self):
         cooldown = self.base_cooldown
 
         for upgrade in self.upgrades:
@@ -179,6 +174,12 @@ class Sword(Weapon):
             elif upgrade.name == "Greatsword":
                 speed *= 0.75 ** upgrade.stacks
 
+            elif upgrade.name == "Beyblade":
+                beyblade_stacks = len(self.beyblade_buffs)
+                if beyblade_stacks > 0:
+                    speed *= 1.25 ** beyblade_stacks
+
+
         return speed
 
     def get_attack_total_angle(self):
@@ -193,14 +194,51 @@ class Sword(Weapon):
     def can_hit(self):
         return self.hit_angle >= self.hit_angle_cooldown
 
-    def hit(self):
+    def hit(self, player):
         self.hit_angle = 0
+        self.trigger_beyblade()
+        damage = self.get_damage()
+
+        player.take_damage(damage)
+
+        self.player.heal(
+            self.get_lifesteal() * damage
+        )
+
+        vortex_force = self.get_vortex_force()
+
+        if vortex_force > 0:
+            direction = (
+                self.player.position
+                - player.position
+            )
+
+            self.player.opponent.apply_force(
+                direction,
+                vortex_force,
+                0.2
+            )
 
     def attack(self):
         if not self.can_attack():
             return []
 
         self.start_cooldown()
+
+        # Step-in
+        step_force = self.get_step_force()
+
+        if step_force > 0:
+            direction = (
+                self.player.opponent.position
+                - self.player.position
+            )
+
+            self.player.apply_force(
+                direction,
+                step_force,
+                0.1
+            )
 
         self.attacking = True
         self.attack_angle = 0
@@ -223,16 +261,8 @@ class Sword(Weapon):
                     self.player
                 )
             )
+
         return projectiles
-
-    def get_vortex_force(self):
-        force = 0
-
-        for upgrade in self.upgrades:
-            if upgrade.name == "Vortex":
-                force += 150 * upgrade.stacks
-
-        return force
 
     def get_lifesteal(self):
         lifesteal = 0
@@ -283,10 +313,8 @@ class Sword(Weapon):
         if not has_beyblade:
             return
 
-        # Immediately refresh attack cooldown
         self.cooldown_timer = 0
 
-        # +10% spin speed for 5 seconds
         self.beyblade_buffs.append(5.0)
 
     def get_hero_stacks(self):
@@ -304,3 +332,21 @@ class Sword(Weapon):
         self.attacking = False
         self.attack_angle = 0
         self.hit_angle = self.hit_angle_cooldown
+
+    def get_step_force(self):
+        force = 0
+        for upgrade in self.upgrades:
+            if upgrade.name == "Step-in":
+                force += 500 * upgrade.stacks
+
+        return force
+
+    def get_vortex_force(self):
+        force = 0
+        for upgrade in self.upgrades:
+            if upgrade.name == "Vortex":
+                force += 250 * upgrade.stacks
+
+        return force
+
+    
