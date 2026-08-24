@@ -1,7 +1,15 @@
 import pygame
 import random
+from pathlib import Path
+
 
 HEALTH_FONT = pygame.font.Font(None, 24)
+
+SPRITE_FOLDER = (
+    Path(__file__).resolve().parent.parent
+    / "assets"
+    / "sprites"
+)
 
 
 class Player:
@@ -21,6 +29,10 @@ class Player:
         self.color = color
         self.speed = speed
 
+        self.sprite = pygame.image.load(
+            SPRITE_FOLDER / "player.png"
+        ).convert_alpha()
+
         self.weapon = weapon_class(self)
         self.attack_key = attack_key
 
@@ -30,23 +42,17 @@ class Player:
 
         self.reset_velocity(speed)
 
-        # Arrows currently attached by Pincushion.
-        self.pinned_arrows = []
-
-        # Shellshock.
-        self.shellshock_timer = 0
-
-        # Temporary movement caused by external effects.
         self.external_velocity = pygame.Vector2()
         self.external_velocity_timer = 0
 
-        # Unarmed afterimages.
-        self.afterimages = []
-        self.afterimage_timer = 0
-        self.afterimage_interval = 0.04
+        self.pinned_arrows = []
+        self.shellshock_timer = 0
+
+    # -------------------------------------------------
+    # UPDATE / DRAW
+    # -------------------------------------------------
 
     def update(self, dt, width, height):
-        # Apply normal movement + temporary external movement.
         if self.velocity.length_squared() > 0:
             self.velocity.scale_to_length(
                 self.get_speed()
@@ -57,237 +63,40 @@ class Player:
             + self.external_velocity
         ) * dt
 
-        # Shellshock.
         if self.shellshock_timer > 0:
             self.shellshock_timer -= dt
 
             if self.shellshock_timer < 0:
                 self.shellshock_timer = 0
 
-        # Temporary external movement.
         if self.external_velocity_timer > 0:
             self.external_velocity_timer -= dt
         else:
             self.external_velocity = pygame.Vector2()
 
-        # Create afterimages while attacking.
-        if (
-            hasattr(
-                self.weapon,
-                "is_attacking"
-            )
-            and self.weapon.is_attacking()
-        ):
-            self.afterimage_timer -= dt
-
-            if self.afterimage_timer <= 0:
-                self.afterimages.append({
-                    "position": self.position.copy(),
-                    "radius": self.get_radius(),
-                    "color": self.color,
-                    "alpha": 140,
-                    "timer": 0.18
-                })
-
-                self.afterimage_timer = (
-                    self.afterimage_interval
-                )
-        else:
-            self.afterimage_timer = 0
-
-        # Update afterimages.
-        for afterimage in self.afterimages:
-            afterimage["timer"] -= dt
-
-            afterimage["alpha"] = max(
-                0,
-                int(
-                    140
-                    * (
-                        afterimage["timer"]
-                        / 0.18
-                    )
-                )
-            )
-
-        self.afterimages = [
-            afterimage
-            for afterimage in self.afterimages
-            if afterimage["timer"] > 0
-        ]
-
-        radius = self.get_radius()
-
-        # Check whether PAC-MAN is active.
-        pacman_active = (
-            hasattr(
-                self.weapon,
-                "pacman_speed_stacks"
-            )
-            and hasattr(
-                self.weapon,
-                "is_attacking"
-            )
-            and self.weapon.is_attacking()
-            and any(
-                upgrade.name == "PAC-MAN"
-                for upgrade in self.weapon.upgrades
-            )
+        self.weapon.handle_player_bounds(
+            width,
+            height
         )
-
-        if pacman_active:
-            wrapped = False
-
-            # Left -> right.
-            if self.position.x + radius < 0:
-                self.position.x = (
-                    width + radius
-                )
-                wrapped = True
-
-            # Right -> left.
-            elif self.position.x - radius > width:
-                self.position.x = -radius
-                wrapped = True
-
-            # Top -> bottom.
-            if self.position.y + radius < 0:
-                self.position.y = (
-                    height + radius
-                )
-                wrapped = True
-
-            # Bottom -> top.
-            elif self.position.y - radius > height:
-                self.position.y = -radius
-                wrapped = True
-
-            if wrapped:
-                self.weapon.pacman_speed_stacks += 1
-
-        else:
-            # Normal wall collisions.
-            bounced = False
-
-            # Left wall.
-            if self.position.x - radius <= 0:
-                self.position.x = radius
-
-                if self.velocity.x < 0:
-                    self.velocity.x *= -1
-                    self.velocity.y += random.uniform(
-                        -75,
-                        75
-                    )
-                    bounced = True
-
-                if self.external_velocity.x < 0:
-                    self.external_velocity.x = 0
-
-            # Right wall.
-            elif self.position.x + radius >= width:
-                self.position.x = width - radius
-
-                if self.velocity.x > 0:
-                    self.velocity.x *= -1
-                    self.velocity.y += random.uniform(
-                        -75,
-                        75
-                    )
-                    bounced = True
-
-                if self.external_velocity.x > 0:
-                    self.external_velocity.x = 0
-
-            # Top wall.
-            if self.position.y - radius <= 0:
-                self.position.y = radius
-
-                if self.velocity.y < 0:
-                    self.velocity.y *= -1
-                    self.velocity.x += random.uniform(
-                        -75,
-                        75
-                    )
-                    bounced = True
-
-                if self.external_velocity.y < 0:
-                    self.external_velocity.y = 0
-
-            # Bottom wall.
-            elif self.position.y + radius >= height:
-                self.position.y = height - radius
-
-                if self.velocity.y > 0:
-                    self.velocity.y *= -1
-                    self.velocity.x += random.uniform(
-                        -75,
-                        75
-                    )
-                    bounced = True
-
-                if self.external_velocity.y > 0:
-                    self.external_velocity.y = 0
-
-            # Preserve normal movement speed after bounce.
-            if (
-                bounced
-                and self.velocity.length_squared() > 0
-            ):
-                self.velocity.scale_to_length(
-                    self.get_speed()
-                )
 
         self.weapon.update(dt)
 
     def draw(self, screen):
-        # Draw afterimages first.
-        for afterimage in self.afterimages:
-            radius = afterimage["radius"]
-
-            surface = pygame.Surface(
-                (
-                    radius * 2,
-                    radius * 2
-                ),
-                pygame.SRCALPHA
-            )
-
-            color = pygame.Color(
-                afterimage["color"]
-            )
-
-            pygame.draw.circle(
-                surface,
-                (
-                    color.r,
-                    color.g,
-                    color.b,
-                    afterimage["alpha"]
-                ),
-                (radius, radius),
-                radius
-            )
-
-            screen.blit(
-                surface,
-                (
-                    afterimage["position"].x - radius,
-                    afterimage["position"].y - radius
-                )
-            )
-
-        # Current player.
-        radius = self.get_radius()
-
-        pygame.draw.circle(
-            screen,
-            self.color,
-            self.position,
-            radius
+        self.weapon.draw_before_player(
+            screen
         )
 
-        # Health number.
+        sprite = self.get_sprite()
+
+        rect = sprite.get_rect(
+            center=self.position
+        )
+
+        screen.blit(
+            sprite,
+            rect
+        )
+
         health_text = HEALTH_FONT.render(
             str(round(self.health)),
             True,
@@ -297,7 +106,9 @@ class Player:
         health_rect = health_text.get_rect(
             center=(
                 self.position.x,
-                self.position.y - radius - 15
+                self.position.y
+                - self.get_hitbox_radius()
+                - 15
             )
         )
 
@@ -308,34 +119,57 @@ class Player:
 
         self.weapon.draw(screen)
 
-    def take_damage(self, damage):
-        # Unarmed Superarmor.
-        if (
-            hasattr(
-                self.weapon,
-                "is_attacking"
-            )
-            and self.weapon.is_attacking()
-        ):
-            for upgrade in self.weapon.upgrades:
-                if upgrade.name == "Superarmor":
-                    damage *= (
-                        0.5 ** upgrade.stacks
-                    )
+    # -------------------------------------------------
+    # SPRITE
+    # -------------------------------------------------
 
-        # Grimoire Magic Barrier.
-        for upgrade in self.weapon.upgrades:
-            if upgrade.name == "Magic Barrier":
-                if (
-                    hasattr(
-                        self.weapon,
-                        "attack_slow_timer"
-                    )
-                    and self.weapon.attack_slow_timer > 0
-                ):
-                    damage *= (
-                        0.1 ** upgrade.stacks
-                    )
+    def get_sprite_size(self):
+        return (
+            self.get_hitbox_radius() * 2
+        )
+
+    def get_sprite(self):
+        size = max(
+            1,
+            int(self.get_sprite_size())
+        )
+
+        sprite = pygame.transform.scale(
+            self.sprite,
+            (
+                size,
+                size
+            )
+        )
+
+        sprite = sprite.copy()
+
+        color = pygame.Color(
+            self.color
+        )
+
+        sprite.fill(
+            (
+                color.r,
+                color.g,
+                color.b,
+                255
+            ),
+            special_flags=pygame.BLEND_RGBA_MULT
+        )
+
+        return self.weapon.modify_player_sprite(
+            sprite
+        )
+
+    # -------------------------------------------------
+    # HEALTH
+    # -------------------------------------------------
+
+    def take_damage(self, damage):
+        damage = self.weapon.modify_incoming_damage(
+            damage
+        )
 
         self.health -= damage
 
@@ -348,37 +182,65 @@ class Player:
     def is_alive(self):
         return self.health > 0
 
-    def reset(self, position):
-        self.position = pygame.Vector2(position)
+    def get_health_ratio(self):
+        if self.max_health <= 0:
+            return 0
 
-        self.max_health = self.get_max_health()
-        self.health = self.max_health
+        return max(
+            0,
+            self.health / self.max_health
+        )
 
-        self.reset_velocity(self.speed)
+    # -------------------------------------------------
+    # PLAYER STATS
+    # -------------------------------------------------
 
-        self.weapon.reset()
+    def get_max_health(self):
+        return (
+            self.base_max_health
+            * self.weapon.get_max_health_multiplier()
+        )
 
-        # Clear temporary movement effects.
-        self.external_velocity = pygame.Vector2()
-        self.external_velocity_timer = 0
+    def get_hitbox_radius(self):
+        return (
+            self.radius
+            * self.weapon.get_radius_multiplier()
+        )
 
-        # Shellshock.
-        self.shellshock_timer = 0
+    def get_speed(self):
+        speed = (
+            self.speed
+            * self.weapon.get_speed_multiplier()
+        )
 
-        # Pincushion.
-        self.pinned_arrows = []
+        for arrow in self.pinned_arrows:
+            if arrow.is_pincushion_active_for(self):
+                speed *= (
+                    arrow.get_pincushion_speed_multiplier()
+                )
 
-        # Afterimages.
-        self.afterimages = []
-        self.afterimage_timer = 0
+        if self.shellshock_timer > 0:
+            speed *= 0.5
+
+        return speed
+
+    # -------------------------------------------------
+    # MOVEMENT
+    # -------------------------------------------------
 
     def reset_velocity(self, speed):
-        angle = random.randint(0, 360)
+        angle = random.randint(
+            0,
+            360
+        )
 
         self.velocity = pygame.Vector2()
 
         self.velocity.from_polar(
-            (speed, angle)
+            (
+                speed,
+                angle
+            )
         )
 
     def apply_force(
@@ -398,115 +260,39 @@ class Player:
 
         self.external_velocity_timer = duration
 
-    def get_max_health(self):
-        health = self.base_max_health
-
-        for upgrade in self.weapon.upgrades:
-            if upgrade.name == "Armor":
-                health *= (
-                    1.25 ** upgrade.stacks
-                )
-
-            elif upgrade.name == "Juggernaut":
-                health *= (
-                    2 ** upgrade.stacks
-                )
-
-            elif upgrade.name == "Light Armor":
-                health *= (
-                    1.1 ** upgrade.stacks
-                )
-
-            elif upgrade.name == "Brute":
-                health *= (
-                    1.5 ** upgrade.stacks
-                )
-
-        return health
-
-    def get_radius(self):
-        radius = self.radius
-
-        for upgrade in self.weapon.upgrades:
-            if upgrade.name == "Juggernaut":
-                radius *= (
-                    1.5 ** upgrade.stacks
-                )
-
-            elif upgrade.name == "Lightweight":
-                radius *= (
-                    0.75 ** upgrade.stacks
-                )
-
-        if hasattr(
-            self.weapon,
-            "get_radius_multiplier"
-        ):
-            radius *= (
-                self.weapon.get_radius_multiplier()
-            )
-
-        return radius
-
-    def get_speed(self):
-        speed = self.speed
-
-        for upgrade in self.weapon.upgrades:
-            if upgrade.name == "Rage":
-                missing_health = (
-                    1
-                    - self.get_health_ratio()
-                )
-
-                speed *= (
-                    1
-                    + missing_health
-                    * upgrade.stacks
-                    * 2
-                )
-
-            elif upgrade.name == "Light Armor":
-                speed *= (
-                    1.25 ** upgrade.stacks
-                )
-
-        # Pincushion.
-        for arrow in self.pinned_arrows:
-            speed *= 0.75
-
-        # Shellshock.
-        if self.shellshock_timer > 0:
-            speed *= 0.5
-
-        # Grimoire firing slowdown.
-        if (
-            hasattr(
-                self.weapon,
-                "attack_slow_timer"
-            )
-            and self.weapon.attack_slow_timer > 0
-        ):
-            speed *= 0.5
-
-        # Unarmed attack speed.
-        if hasattr(
-            self.weapon,
-            "get_speed_multiplier"
-        ):
-            speed *= (
-                self.weapon.get_speed_multiplier()
-            )
-
-        return speed
-
-    def get_health_ratio(self):
-        return max(
-            0,
-            self.health / self.max_health
-        )
+    # -------------------------------------------------
+    # STATUS EFFECTS
+    # -------------------------------------------------
 
     def apply_shellshock(self, duration):
         self.shellshock_timer = max(
             self.shellshock_timer,
             duration
         )
+
+    # -------------------------------------------------
+    # RESET
+    # -------------------------------------------------
+
+    def reset(self, position):
+        self.position = pygame.Vector2(
+            position
+        )
+
+        self.max_health = (
+            self.get_max_health()
+        )
+
+        self.health = self.max_health
+
+        self.reset_velocity(
+            self.speed
+        )
+
+        self.external_velocity = pygame.Vector2()
+        self.external_velocity_timer = 0
+
+        self.shellshock_timer = 0
+        self.pinned_arrows = []
+
+        self.weapon.reset()

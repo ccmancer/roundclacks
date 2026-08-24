@@ -1,4 +1,12 @@
 import pygame
+from pathlib import Path
+
+
+SPRITE_FOLDER = (
+    Path(__file__).resolve().parent.parent
+    / "assets"
+    / "sprites"
+)
 
 
 class FirePatch:
@@ -18,6 +26,7 @@ class FirePatch:
         self.damage = damage
         self.owner = owner
 
+        # Gameplay hitbox.
         self.radius = radius
 
         self.duration = duration
@@ -28,9 +37,16 @@ class FirePatch:
 
         self.alive = True
 
-        # Used by collision handling.
         self.can_hit_owner = False
         self.is_fire_patch = True
+
+        self.sprite = pygame.image.load(
+            SPRITE_FOLDER / "fire_patch.png"
+        ).convert_alpha()
+
+    # -------------------------------------------------
+    # UPDATE
+    # -------------------------------------------------
 
     def update(self, dt):
         self.timer -= dt
@@ -44,78 +60,56 @@ class FirePatch:
         ):
             self.damage_timers[player] -= dt
 
+    # -------------------------------------------------
+    # DRAW
+    # -------------------------------------------------
+
     def draw(self, screen):
         fade = max(
             0,
             self.timer / self.duration
         )
 
-        outer_alpha = int(
-            160 * fade
-        )
-
-        inner_alpha = int(
-            220 * fade
-        )
-
-        surface_size = max(
+        size = max(
             1,
             int(self.radius * 2)
         )
 
-        surface = pygame.Surface(
-            (
-                surface_size,
-                surface_size
-            ),
-            pygame.SRCALPHA
+        sprite = pygame.transform.scale(
+            self.sprite,
+            (size, size)
         )
 
-        center = (
-            self.radius,
-            self.radius
+        sprite = sprite.copy()
+
+        sprite.set_alpha(
+            int(255 * fade)
         )
 
-        pygame.draw.circle(
-            surface,
-            (
-                255,
-                100,
-                0,
-                outer_alpha
-            ),
-            center,
-            int(self.radius)
-        )
-
-        pygame.draw.circle(
-            surface,
-            (
-                255,
-                220,
-                0,
-                inner_alpha
-            ),
-            center,
-            int(self.radius * 0.6)
+        rect = sprite.get_rect(
+            center=self.position
         )
 
         screen.blit(
-            surface,
-            (
-                self.position.x
-                - self.radius,
-                self.position.y
-                - self.radius
-            )
+            sprite,
+            rect
         )
 
+    # -------------------------------------------------
+    # HITBOX
+    # -------------------------------------------------
+
+    def get_hitbox_radius(self):
+        return self.radius
+
+    # -------------------------------------------------
+    # HIT
+    # -------------------------------------------------
+
     def hit(self, player):
-        # Fire cannot damage its owner.
         if player == self.owner:
             return []
 
-        # First hit is immediate.
         if player not in self.damage_timers:
             player.take_damage(
                 self.damage
@@ -127,7 +121,6 @@ class FirePatch:
 
             return []
 
-        # Subsequent hits happen at the tick rate.
         if self.damage_timers[player] <= 0:
             player.take_damage(
                 self.damage

@@ -1,4 +1,12 @@
 import pygame
+from pathlib import Path
+
+
+SPRITE_FOLDER = (
+    Path(__file__).resolve().parent.parent
+    / "assets"
+    / "sprites"
+)
 
 
 class NukePool:
@@ -11,9 +19,13 @@ class NukePool:
         duration=3.0,
         tick_interval=0.02
     ):
-        self.position = pygame.Vector2(position)
+        self.position = pygame.Vector2(
+            position
+        )
 
+        # Gameplay hitbox.
         self.radius = radius
+
         self.damage = damage
         self.owner = owner
 
@@ -25,6 +37,14 @@ class NukePool:
 
         self.alive = True
         self.can_hit_owner = True
+
+        self.sprite = pygame.image.load(
+            SPRITE_FOLDER / "nuke_pool.png"
+        ).convert_alpha()
+
+    # -------------------------------------------------
+    # UPDATE
+    # -------------------------------------------------
 
     def update(self, dt):
         self.timer -= dt
@@ -38,13 +58,57 @@ class NukePool:
         ):
             self.damage_timers[player] -= dt
 
+    # -------------------------------------------------
+    # DRAW
+    # -------------------------------------------------
+
     def draw(self, screen):
-        pygame.draw.circle(
-            screen,
-            "green",
-            self.position,
-            int(self.radius)
+        size = max(
+            1,
+            int(self.radius * 2)
         )
+
+        sprite = pygame.transform.scale(
+            self.sprite,
+            (
+                size,
+                size
+            )
+        )
+
+        sprite = sprite.copy()
+
+        fade = max(
+            0,
+            min(
+                1,
+                self.timer / self.duration
+            )
+        )
+
+        sprite.set_alpha(
+            int(255 * fade)
+        )
+
+        rect = sprite.get_rect(
+            center=self.position
+        )
+
+        screen.blit(
+            sprite,
+            rect
+        )
+
+    # -------------------------------------------------
+    # HITBOX
+    # -------------------------------------------------
+
+    def get_hitbox_radius(self):
+        return self.radius
+
+    # -------------------------------------------------
+    # HIT
+    # -------------------------------------------------
 
     def hit(self, player):
         if player not in self.damage_timers:

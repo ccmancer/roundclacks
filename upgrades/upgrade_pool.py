@@ -147,7 +147,7 @@ BOW_UPGRADES = [
     Upgrade(
         "Aerodynamic",
         "common",
-        "+100% projectile speed"
+        "+50% projectile speed"
     ),
 
     Upgrade(
@@ -191,7 +191,7 @@ BOW_UPGRADES = [
     Upgrade(
         "Sniper",
         "rare",
-        "+50% damage, +50% cooldown, +100% arrow speed, -25% orbit speed"
+        "+50% damage, +50% cooldown, +50% arrow speed, -25% orbit speed"
     ),
 
     Upgrade(
@@ -217,7 +217,7 @@ BOW_UPGRADES = [
     Upgrade(
         "Machinegun",
         "super rare",
-        "-50% damage, -95% cooldown, +spread"
+        "-50% damage, -99% cooldown, +spread"
     ),
 
     Upgrade(
@@ -235,7 +235,7 @@ BOW_UPGRADES = [
     Upgrade(
         "MLG",
         "super rare",
-        "+200% orbit speed, +400$ damage, +300% arrow speed"
+        "+200% orbit speed, +400$ damage, +100% arrow speed"
     )
 ]
 
@@ -278,7 +278,7 @@ BOMB_UPGRADES = [
     Upgrade(
         "Madness",
         "rare",
-        "-75% cooldown, +spread"
+        "-90% cooldown, +50% self damage, +spread"
     ),
 
     Upgrade(

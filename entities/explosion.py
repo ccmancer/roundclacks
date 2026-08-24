@@ -1,8 +1,16 @@
 import pygame
+from pathlib import Path
 
 from entities.nuke_pool import NukePool
 from entities.earthlight_ray import EarthlightRay
 from entities.chaos_blade import ChaosBlade
+
+
+SPRITE_FOLDER = (
+    Path(__file__).resolve().parent.parent
+    / "assets"
+    / "sprites"
+)
 
 
 class Explosion:
@@ -23,7 +31,13 @@ class Explosion:
         chaos_size=0,
         duration=0.5
     ):
-        self.position = pygame.Vector2(position)
+        self.position = pygame.Vector2(
+            position
+        )
+
+        # -------------------------------------------------
+        # Gameplay
+        # -------------------------------------------------
 
         self.radius = radius
 
@@ -35,6 +49,7 @@ class Explosion:
             self_damage_multiplier
         )
 
+        # Fuse / warning time.
         self.startup_timer = startup
 
         self.shellshock_duration = (
@@ -60,55 +75,112 @@ class Explosion:
         self.hit_players = set()
         self.spawned = False
 
+        # -------------------------------------------------
+        # Sprites
+        # -------------------------------------------------
+
+        self.explosion_sprite = pygame.image.load(
+            SPRITE_FOLDER / "explosion.png"
+        ).convert_alpha()
+
+        self.warning_sprite = pygame.image.load(
+            SPRITE_FOLDER / "warning.png"
+        ).convert_alpha()
+
+    # -------------------------------------------------
+    # UPDATE
+    # -------------------------------------------------
+
     def update(self, dt):
+        # Fuse / warning phase.
         if self.startup_timer > 0:
             self.startup_timer -= dt
+
+            if self.startup_timer < 0:
+                self.startup_timer = 0
+
             return
 
+        # Explosion lifetime.
         self.timer -= dt
 
         if self.timer <= 0:
+            self.timer = 0
             self.alive = False
 
+    # -------------------------------------------------
+    # DRAW
+    # -------------------------------------------------
+
     def draw(self, screen):
-        if self.startup_timer > 0:
-            pygame.draw.circle(
-                screen,
-                "red",
-                self.position,
-                int(self.radius),
-                3
-            )
-            return
-
-        pygame.draw.circle(
-            screen,
-            "orange",
-            self.position,
-            int(self.radius)
-        )
-
-        pygame.draw.circle(
-            screen,
-            "red",
-            self.position,
-            int(self.radius),
-            4
-        )
-
-        inner_radius = max(
+        sprite_size = max(
             1,
-            int(self.radius * 0.35)
+            int(self.radius * 2)
         )
 
-        pygame.draw.circle(
-            screen,
-            "yellow",
-            self.position,
-            inner_radius
+        # -------------------------------------------------
+        # Choose sprite
+        # -------------------------------------------------
+
+        if self.startup_timer > 0:
+            sprite = self.warning_sprite
+            alpha = 255
+
+        else:
+            sprite = self.explosion_sprite
+
+            fade = max(
+                0,
+                min(
+                    1,
+                    self.timer / self.duration
+                )
+            )
+
+            alpha = int(
+                255 * fade
+            )
+
+        # -------------------------------------------------
+        # Scale
+        # -------------------------------------------------
+
+        sprite = pygame.transform.scale(
+            sprite,
+            (
+                sprite_size,
+                sprite_size
+            )
         )
+
+        sprite = sprite.copy()
+
+        sprite.set_alpha(
+            alpha
+        )
+
+        rect = sprite.get_rect(
+            center=self.position
+        )
+
+        screen.blit(
+            sprite,
+            rect
+        )
+
+    # -------------------------------------------------
+    # HITBOX
+    # -------------------------------------------------
+
+    def get_hitbox_radius(self):
+        return self.radius
+
+    # -------------------------------------------------
+    # HIT
+    # -------------------------------------------------
 
     def hit(self, player):
+        # Cannot hit during fuse.
         if self.startup_timer > 0:
             return []
 
@@ -119,20 +191,23 @@ class Explosion:
 
         damage = self.damage
 
+        # Owner self-damage.
         if player == self.owner:
-            # Heal before applying self-damage.
             if self.pyromaniac_heal > 0:
                 self.owner.heal(
                     self.damage
                     * self.pyromaniac_heal
                 )
 
-            damage *= self.self_damage_multiplier
+            damage *= (
+                self.self_damage_multiplier
+            )
 
         player.take_damage(
             damage
         )
 
+        # Knockback.
         direction = (
             player.position
             - self.position
@@ -145,12 +220,17 @@ class Explosion:
                 0.2
             )
 
+        # Shellshock.
         if self.shellshock_duration > 0:
             player.apply_shellshock(
                 self.shellshock_duration
             )
 
         return []
+
+    # -------------------------------------------------
+    # SPAWNED ENTITIES
+    # -------------------------------------------------
 
     def get_spawned_entities(self):
         if self.startup_timer > 0:
@@ -163,7 +243,7 @@ class Explosion:
 
         spawned = []
 
-        # Nuke pool
+        # Nuke Pool.
         if self.pool_damage > 0:
             spawned.append(
                 NukePool(
@@ -174,33 +254,42 @@ class Explosion:
                 )
             )
 
-        # Earthlight Ray
+        # Earthlight Ray.
         if self.earthlight_ray_damage > 0:
             opponent = self.owner.opponent
 
-            direction = (
-                opponent.position
-                - self.position
-            )
-
-            if direction.length_squared() > 0:
-                direction = direction.normalize()
-
-                ray_position = (
-                    self.position
-                    + direction * 20
+            if opponent is not None:
+                direction = (
+                    opponent.position
+                    - self.position
                 )
 
-                spawned.append(
-                    EarthlightRay(
-                        ray_position,
-                        direction,
-                        self.earthlight_ray_damage,
-                        self.owner
+                if direction.length_squared() > 0:
+                    direction = (
+                        direction.normalize()
                     )
-                )
+
+                    ray_position = (
+                        self.position
+                        + direction * 20
+                    )
+
+                    spawned.append(
+                        EarthlightRay(
+                            ray_position,
+                            direction,
+                            self.earthlight_ray_damage,
+                            self.owner
+                        )
+                    )
+
+        # Chaos Bomb.
         if self.chaos_damage > 0:
-            for angle in range(0, 360, 90):
+            for angle in range(
+                0,
+                360,
+                90
+            ):
                 direction = pygame.Vector2(
                     1,
                     0
@@ -210,13 +299,13 @@ class Explosion:
                     ChaosBlade(
                         self.position,
                         direction,
-                        self.radius*2,
+                        self.radius * 2,
                         self.chaos_damage,
                         self.owner,
                         self.chaos_size,
-                        2,   # duration
-                        180,    # rotation speed
-                        250     # outward speed
+                        2,
+                        180,
+                        250
                     )
                 )
 

@@ -15,21 +15,27 @@ class Beam:
     ):
         self.weapon = weapon
 
-        self.position = pygame.Vector2(
-            weapon.position
-        )
+        self.angle_offset = angle_offset
 
         self.direction = pygame.Vector2(
             weapon.direction
-        ).rotate(angle_offset)
+        ).rotate(
+            self.angle_offset
+        )
 
-        self.angle_offset = angle_offset
+        # Start slightly in front of the Grimoire
+        # so the book remains visible.
+        self.position = (
+            weapon.position
+            + self.direction * 12
+        )
 
         self.damage = damage
 
         self.duration = duration
         self.timer = duration
 
+        # Gameplay hitbox dimensions.
         self.width = width
         self.length = 2000
 
@@ -42,22 +48,26 @@ class Beam:
         self.alive = True
         self.is_beam = True
 
-        # Prevents the same player from being hit
-        # more than once during one tick.
         self.hit_this_tick = set()
+
+    # -------------------------------------------------
+    # UPDATE
+    # -------------------------------------------------
 
     def update(self, dt):
         self.timer -= dt
-
-        # Follow the book.
-        self.position = pygame.Vector2(
-            self.weapon.position
-        )
 
         self.direction = pygame.Vector2(
             self.weapon.direction
         ).rotate(
             self.angle_offset
+        )
+
+        # Follow the Grimoire while staying slightly
+        # in front of it.
+        self.position = (
+            self.weapon.position
+            + self.direction * 12
         )
 
         if self.timer <= 0:
@@ -68,8 +78,11 @@ class Beam:
 
         if self.tick_timer <= 0:
             self.tick_timer = self.tick_interval
-
             self.hit_this_tick.clear()
+
+    # -------------------------------------------------
+    # DRAW
+    # -------------------------------------------------
 
     def draw(self, screen):
         perpendicular = pygame.Vector2(
@@ -77,7 +90,9 @@ class Beam:
             self.direction.x
         )
 
-        half_width = self.width / 2
+        half_width = (
+            self.width / 2
+        )
 
         start = self.position
 
@@ -108,7 +123,7 @@ class Beam:
 
         pygame.draw.polygon(
             screen,
-            "purple",
+            "white",
             [
                 top_start,
                 top_end,
@@ -117,11 +132,27 @@ class Beam:
             ]
         )
 
+    # -------------------------------------------------
+    # HITBOX
+    # -------------------------------------------------
+
+    def get_hitbox_length(self):
+        return self.length
+
+    def get_hitbox_width(self):
+        return self.width
+
+    # -------------------------------------------------
+    # HIT
+    # -------------------------------------------------
+
     def hit(self, player):
         if player in self.hit_this_tick:
             return []
 
-        self.hit_this_tick.add(player)
+        self.hit_this_tick.add(
+            player
+        )
 
         player.take_damage(
             self.damage
@@ -129,7 +160,8 @@ class Beam:
 
         if self.lifesteal > 0:
             self.weapon.player.heal(
-                self.damage * self.lifesteal
+                self.damage
+                * self.lifesteal
             )
 
         if self.knockback > 0:

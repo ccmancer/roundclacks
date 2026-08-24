@@ -1,33 +1,79 @@
 import pygame
 import random
 
+from pathlib import Path
+
 from weapons.weapon import Weapon
 from entities.bomb_projectile import BombProjectile
 from upgrades.upgrade_pool import BOMB_UPGRADES
+
+
+SPRITE_FOLDER = (
+    Path(__file__).resolve().parent.parent
+    / "assets"
+    / "sprites"
+)
 
 
 class Bomb(Weapon):
     def __init__(self, player):
         super().__init__(
             player,
-            50,     # orbit distance
-            3,      # rotation speed
-            25,     # base damage
-            1.0,    # base cooldown
-            False
+            50,
+            3,
+            25,
+            2.0,          # 2 second base cooldown
+            False,
+            "bomb.png",
+            60,
+            60
         )
+
+        # Sprite shown while the bomb is on cooldown.
+        self.missing_sprite = pygame.image.load(
+            SPRITE_FOLDER / "bomb_missing.png"
+        ).convert_alpha()
 
         self.upgrade_pool = BOMB_UPGRADES
 
+    # -------------------------------------------------
+    # SPRITE
+    # -------------------------------------------------
 
+    def get_sprite(self):
+        if self.can_attack():
+            base_sprite = self.sprite
+        else:
+            base_sprite = self.missing_sprite
+
+        sprite = pygame.transform.scale(
+            base_sprite,
+            (
+                int(self.get_sprite_length()),
+                int(self.get_sprite_width())
+            )
+        )
+
+        return self.apply_ready_glow(
+            sprite,
+            self.get_ready_glow_strength()
+        )
 
     def draw(self, screen):
-        pygame.draw.circle(
-            screen,
-            "black",
-            self.position,
-            12
+        sprite = self.get_sprite()
+
+        rect = sprite.get_rect(
+            center=self.position
         )
+
+        screen.blit(
+            sprite,
+            rect
+        )
+
+    # -------------------------------------------------
+    # ATTACK
+    # -------------------------------------------------
 
     def attack(self):
         if not self.can_attack():
@@ -42,7 +88,9 @@ class Bomb(Weapon):
             spread
         )
 
-        direction = self.direction.rotate(offset)
+        direction = (
+            self.direction.rotate(offset)
+        )
 
         return [
             BombProjectile(
@@ -67,6 +115,10 @@ class Bomb(Weapon):
             )
         ]
 
+    # -------------------------------------------------
+    # DAMAGE / COOLDOWN
+    # -------------------------------------------------
+
     def get_damage(self):
         damage = self.base_damage
 
@@ -85,6 +137,22 @@ class Bomb(Weapon):
 
         return damage
 
+    def get_attack_cooldown(self):
+        cooldown = self.base_cooldown
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Madness":
+                cooldown *= 0.1 ** upgrade.stacks
+
+            elif upgrade.name == "Nuke":
+                cooldown *= 2 ** upgrade.stacks
+
+        return cooldown
+
+    # -------------------------------------------------
+    # PROJECTILE
+    # -------------------------------------------------
+
     def get_initial_momentum(self):
         momentum = 500
 
@@ -93,6 +161,21 @@ class Bomb(Weapon):
                 momentum *= 2 ** upgrade.stacks
 
         return momentum
+
+    def get_spread(self):
+        spread = 0
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Madness":
+                spread += (
+                    20 * upgrade.stacks
+                )
+
+        return spread
+
+    # -------------------------------------------------
+    # EXPLOSION
+    # -------------------------------------------------
 
     def get_blast_radius(self):
         radius = 75
@@ -124,6 +207,99 @@ class Bomb(Weapon):
 
         return knockback
 
+    # -------------------------------------------------
+    # SPECIAL EFFECTS
+    # -------------------------------------------------
+
+    def get_fuse_time(self):
+        fuse_time = 0
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Fuse":
+                fuse_time += (
+                    0.5
+                    * upgrade.stacks
+                )
+
+        return fuse_time
+
+    def get_self_damage_multiplier(self):
+        pyromaniac_stacks = 0
+        professional_stacks = 0
+        madness_stacks = 0
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Pyromaniac":
+                pyromaniac_stacks += upgrade.stacks
+
+            elif upgrade.name == "Professional":
+                professional_stacks += upgrade.stacks
+
+            elif upgrade.name == "Madness":
+                madness_stacks += upgrade.stacks
+
+        # Pyromaniac completely removes self-damage.
+        if pyromaniac_stacks > 0:
+            return 0
+
+        multiplier = 1
+
+        # Professional reduces self-damage.
+        if professional_stacks > 0:
+            multiplier *= (
+                0.5
+                ** professional_stacks
+            )
+
+        # Madness increases self-damage by 50% per stack.
+        if madness_stacks > 0:
+            multiplier *= (
+                1.5
+                ** madness_stacks
+            )
+
+        return multiplier
+
+    def get_shellshock_duration(self):
+        duration = 0
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Shellshock":
+                duration = (
+                    5
+                    * upgrade.stacks
+                )
+
+        return duration
+
+    def get_mine_duration(self):
+        duration = 0
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Mine":
+                duration = (
+                    5
+                    * upgrade.stacks
+                )
+
+        return duration
+
+    def get_cluster_count(self):
+        count = 0
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Cluster Bomb":
+                count += (
+                    8
+                    * upgrade.stacks
+                )
+
+        return count
+
+    # -------------------------------------------------
+    # PYROMANIAC
+    # -------------------------------------------------
+
     def get_professional_stacks(self):
         stacks = 0
 
@@ -140,70 +316,22 @@ class Bomb(Weapon):
             if upgrade.name == "Pyromaniac":
                 stacks += upgrade.stacks
 
-        # Professional becomes extra Pyromaniac stacks
-        # when Pyromaniac is present.
         if stacks > 0:
-            stacks += self.get_professional_stacks()
+            stacks += (
+                self.get_professional_stacks()
+            )
 
         return stacks
 
-    def get_self_damage_multiplier(self):
-        pyromaniac_stacks = 0
-        professional_stacks = 0
+    def get_pyromaniac_heal(self):
+        return (
+            0.5
+            * self.get_pyromaniac_stacks()
+        )
 
-        for upgrade in self.upgrades:
-            if upgrade.name == "Pyromaniac":
-                pyromaniac_stacks += upgrade.stacks
-
-            elif upgrade.name == "Professional":
-                professional_stacks += upgrade.stacks
-
-        # Pyromaniac overwrites Professional.
-        if pyromaniac_stacks > 0:
-            return 0
-
-        multiplier = 1
-
-        if professional_stacks > 0:
-            multiplier *= 0.5 ** professional_stacks
-
-        return multiplier
-
-    def get_fuse_time(self):
-        fuse_time = 0
-
-        for upgrade in self.upgrades:
-            if upgrade.name == "Fuse":
-                fuse_time += 0.5 * upgrade.stacks
-
-        return fuse_time
-
-    def get_shellshock_duration(self):
-        duration = 0
-
-        for upgrade in self.upgrades:
-            if upgrade.name == "Shellshock":
-                duration = 5 * upgrade.stacks
-
-        return duration
-
-    def get_mine_duration(self):
-        duration = 0
-
-        for upgrade in self.upgrades:
-            if upgrade.name == "Mine":
-                duration = 5 * upgrade.stacks
-
-        return duration
-
-    def get_cluster_count(self):
-        count = 0
-
-        for upgrade in self.upgrades:
-            if upgrade.name == "Cluster Bomb":
-                count += 8 * upgrade.stacks
-
-        return count
+    # -------------------------------------------------
+    # NUKES / CHAOS
+    # -------------------------------------------------
 
     def get_pool_damage(self):
         damage = 0
@@ -214,11 +342,6 @@ class Bomb(Weapon):
 
         return damage
 
-    def get_pyromaniac_heal(self):
-        stacks = self.get_pyromaniac_stacks()
-
-        return 0.5 * stacks
-
     def get_earthlight_ray_damage(self):
         damage = 0
 
@@ -227,7 +350,9 @@ class Bomb(Weapon):
                 damage = (
                     self.get_damage()
                     * 0.5
-                    * 2 ** (upgrade.stacks - 1)
+                    * 2 ** (
+                        upgrade.stacks - 1
+                    )
                 )
 
         return damage
@@ -240,32 +365,15 @@ class Bomb(Weapon):
                 damage = (
                     self.get_damage()
                     * 0.5
-                    * 2 ** (upgrade.stacks - 1)
+                    * 2 ** (
+                        upgrade.stacks - 1
+                    )
                 )
 
         return damage
 
     def get_chaos_size(self):
-        # Scythes get larger with the blast radius.
-        return self.get_blast_radius() * 0.5
-
-    def get_attack_cooldown(self):
-        cooldown = self.base_cooldown
-
-        for upgrade in self.upgrades:
-            if upgrade.name == "Madness":
-                cooldown *= 0.25 ** upgrade.stacks
-
-            elif upgrade.name == "Nuke":
-                cooldown *= 2 ** upgrade.stacks
-
-        return cooldown
-
-    def get_spread(self):
-        spread = 0
-
-        for upgrade in self.upgrades:
-            if upgrade.name == "Madness":
-                spread += 20 * upgrade.stacks
-
-        return spread
+        return (
+            self.get_blast_radius()
+            * 0.5
+        )

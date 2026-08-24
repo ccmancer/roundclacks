@@ -36,55 +36,101 @@ class BombProjectile(Projectile):
             speed,
             damage,
             owner,
-            radius
+            radius,
+            "bomb.png"
         )
 
-        self.velocity = self.direction * speed
+        self.velocity = (
+            self.direction * speed
+        )
+
         self.gravity = gravity
 
+        # -------------------------------------------------
+        # Explosion
+        # -------------------------------------------------
+
         self.blast_radius = blast_radius
-        self.blast_knockback = blast_knockback
+
+        self.blast_knockback = (
+            blast_knockback
+        )
 
         self.self_damage_multiplier = (
             self_damage_multiplier
         )
 
+        # Fuse / warning.
         self.fuse_time = fuse_time
 
+        # -------------------------------------------------
         # Mine
+        # -------------------------------------------------
+
         self.mine_duration = mine_duration
         self.mine_timer = mine_duration
-        self.is_mine = mine_duration > 0
+
+        self.is_mine = (
+            mine_duration > 0
+        )
+
         self.stuck_to_border = False
         self.should_explode = False
 
+        # -------------------------------------------------
         # Cluster Bomb
+        # -------------------------------------------------
+
         self.cluster_count = cluster_count
         self.cluster_child = cluster_child
         self.cluster_timer = cluster_delay
 
+        # -------------------------------------------------
         # Nuke
+        # -------------------------------------------------
+
         self.pool_damage = pool_damage
 
+        # -------------------------------------------------
         # Pyromaniac
-        self.pyromaniac_heal = pyromaniac_heal
+        # -------------------------------------------------
 
+        self.pyromaniac_heal = (
+            pyromaniac_heal
+        )
+
+        # -------------------------------------------------
         # Shellshock
+        # -------------------------------------------------
+
         self.shellshock_duration = (
             shellshock_duration
         )
 
+        # -------------------------------------------------
         # Earthlight Ray
+        # -------------------------------------------------
+
         self.earthlight_ray_damage = (
             earthlight_ray_damage
         )
 
+        # -------------------------------------------------
         # Chaos Bomb
+        # -------------------------------------------------
+
         self.chaos_damage = chaos_damage
         self.chaos_size = chaos_size
 
+    # -------------------------------------------------
+    # UPDATE
+    # -------------------------------------------------
+
     def update(self, dt):
-        # Cluster fragments
+        # -------------------------------------------------
+        # Cluster fragment
+        # -------------------------------------------------
+
         if self.cluster_child:
             self.position += (
                 self.velocity * dt
@@ -97,28 +143,37 @@ class BombProjectile(Projectile):
 
             return
 
-        # Mine attached to border
+        # -------------------------------------------------
+        # Mine
+        # -------------------------------------------------
+
         if self.stuck_to_border:
             self.mine_timer -= dt
 
             opponent = self.owner.opponent
 
-            distance = self.position.distance_to(
-                opponent.position
-            )
+            if opponent is not None:
+                distance = (
+                    self.position.distance_to(
+                        opponent.position
+                    )
+                )
 
-            if distance <= (
-                self.blast_radius
-                + opponent.get_radius()
-            ):
-                self.should_explode = True
+                if distance <= (
+                    self.blast_radius
+                    + opponent.get_hitbox_radius()
+                ):
+                    self.should_explode = True
 
-            elif self.mine_timer <= 0:
+            if self.mine_timer <= 0:
                 self.should_explode = True
 
             return
 
+        # -------------------------------------------------
         # Normal bomb
+        # -------------------------------------------------
+
         self.velocity.y += (
             self.gravity * dt
         )
@@ -127,41 +182,68 @@ class BombProjectile(Projectile):
             self.velocity * dt
         )
 
+    # -------------------------------------------------
+    # DRAW
+    # -------------------------------------------------
+
     def draw(self, screen):
-        if self.cluster_child:
-            pygame.draw.circle(
-                screen,
-                "gray",
-                self.position,
-                self.radius
-            )
-            return
+        sprite = self.get_sprite()
 
-        if self.stuck_to_border:
-            pygame.draw.circle(
-                screen,
-                "red",
-                self.position,
-                self.radius
-            )
-
-            pygame.draw.circle(
-                screen,
-                "orange",
-                self.position,
-                self.radius + 4,
-                2
-            )
-            return
-
-        pygame.draw.circle(
-            screen,
-            "black",
-            self.position,
-            self.radius
+        rect = sprite.get_rect(
+            center=self.position
         )
 
-    def stick_to_border(self, width, height):
+        screen.blit(
+            sprite,
+            rect
+        )
+
+    # -------------------------------------------------
+    # SPRITE
+    # -------------------------------------------------
+
+    def get_sprite_length(self):
+        if self.cluster_child:
+            return 30
+
+        return 60
+
+    def get_sprite_width(self):
+        if self.cluster_child:
+            return 30
+
+        return 60
+
+    def get_sprite(self):
+        # Bombs are always upright.
+        return pygame.transform.scale(
+            self.sprite,
+            (
+                int(self.get_sprite_length()),
+                int(self.get_sprite_width())
+            )
+        )
+
+    # -------------------------------------------------
+    # HITBOX
+    # -------------------------------------------------
+
+    def get_hitbox_radius(self):
+        return self.radius
+
+    # -------------------------------------------------
+    # BORDER
+    # -------------------------------------------------
+
+    def stick_to_border(
+        self,
+        width,
+        height
+    ):
+        radius = (
+            self.get_hitbox_radius()
+        )
+
         distances = {
             "left": self.position.x,
             "right": width - self.position.x,
@@ -175,24 +257,28 @@ class BombProjectile(Projectile):
         )
 
         if border == "left":
-            self.position.x = self.radius
+            self.position.x = radius
 
         elif border == "right":
             self.position.x = (
-                width - self.radius
+                width - radius
             )
 
         elif border == "top":
-            self.position.y = self.radius
+            self.position.y = radius
 
         elif border == "bottom":
             self.position.y = (
-                height - self.radius
+                height - radius
             )
 
         self.velocity = pygame.Vector2()
 
         self.stuck_to_border = True
+
+    # -------------------------------------------------
+    # EXPLOSION
+    # -------------------------------------------------
 
     def explode(self):
         explosion = Explosion(
@@ -217,17 +303,26 @@ class BombProjectile(Projectile):
             explosion
         ]
 
-        # Only original bombs create fragments.
+        # -------------------------------------------------
+        # Cluster Bomb
+        # -------------------------------------------------
+
+        # Only the original bomb creates fragments.
         if (
             self.cluster_count > 0
             and not self.cluster_child
         ):
-            for _ in range(self.cluster_count):
+            for _ in range(
+                self.cluster_count
+            ):
                 direction = pygame.Vector2(
                     1,
                     0
                 ).rotate(
-                    random.uniform(0, 360)
+                    random.uniform(
+                        0,
+                        360
+                    )
                 )
 
                 fragment_speed = random.uniform(
@@ -240,36 +335,81 @@ class BombProjectile(Projectile):
                     0.4
                 )
 
+                # -------------------------------------------------
+                # Inherited effects
+                # -------------------------------------------------
+
                 spawned.append(
                     BombProjectile(
                         self.position,
                         direction,
+
+                        # Fragment damage.
                         self.damage * 0.5,
+
                         self.owner,
+
                         fragment_speed,
+
+                        # Fragment explosion radius.
                         self.blast_radius * 0.5,
+
+                        # Inherit knockback.
                         self.blast_knockback,
+
+                        # Inherit self-damage behavior.
                         self.self_damage_multiplier,
+
+                        # Inherit Fuse.
+                        self.fuse_time,
+
+                        # Do not inherit Mine.
                         0,
+
+                        # Never create more clusters.
                         0,
-                        0,
+
+                        # This is a cluster child.
                         True,
-                        0,
+
+                        # Inherit Nuke.
+                        self.pool_damage,
+
+                        # Inherit Pyromaniac.
                         self.pyromaniac_heal,
-                        0,
-                        0,
-                        0,
-                        0,
+
+                        # Inherit Shellshock.
+                        self.shellshock_duration,
+
+                        # Inherit Earthlight Ray.
+                        self.earthlight_ray_damage,
+
+                        # Inherit Chaos Bomb.
+                        self.chaos_damage,
+
+                        # Inherit Chaos size.
+                        self.chaos_size,
+
+                        # Delay before fragment explodes.
                         fragment_delay,
+
+                        # Fragment hitbox.
                         6,
+
+                        # No gravity on fragment.
                         0
                     )
                 )
 
         return spawned
 
+    # -------------------------------------------------
+    # HIT
+    # -------------------------------------------------
+
     def hit(self, player):
-        # Cluster fragments cannot hit players.
+        # Cluster fragments don't directly damage players.
+        # They explode when their delay expires.
         if self.cluster_child:
             return []
 

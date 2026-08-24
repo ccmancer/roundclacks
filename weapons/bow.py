@@ -1,6 +1,7 @@
 import pygame
 import math
 import random
+from pathlib import Path
 
 from weapons.weapon import Weapon
 from entities.arrow import Arrow
@@ -8,24 +9,109 @@ from upgrades.upgrade_pool import BOW_UPGRADES
 from entities.bear_trap import BearTrap
 
 
+SPRITE_FOLDER = (
+    Path(__file__).resolve().parent.parent
+    / "assets"
+    / "sprites"
+)
+
+
 class Bow(Weapon):
     def __init__(self, player):
         super().__init__(
             player,
-            50,    # orbit distance
-            3,     # rotation speed
-            20,    # base damage
-            0.75,  # base cooldown
-            False
+            50,
+            3,
+            20,
+            2.0,          # 2 second base cooldown
+            False,
+            "bow.png",
+            80,
+            80
         )
 
+        self.primed_sprite = pygame.image.load(
+            SPRITE_FOLDER / "bow_primed.png"
+        ).convert_alpha()
+
         self.upgrade_pool = BOW_UPGRADES
+
+    # -------------------------------------------------
+    # SPRITE
+    # -------------------------------------------------
+
+    def get_sprite_scale(self):
+        scale = 1
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Greatbow":
+                scale *= (
+                    1.5 ** upgrade.stacks
+                )
+
+        return scale
+
+    def get_sprite_length(self):
+        return (
+            self.base_sprite_length
+            * self.get_sprite_scale()
+        )
+
+    def get_sprite_width(self):
+        return (
+            self.base_sprite_width
+            * self.get_sprite_scale()
+        )
+
+    def get_sprite(self, angle=None):
+        if self.can_attack():
+            base_sprite = self.primed_sprite
+        else:
+            base_sprite = self.sprite
+
+        length = max(
+            1,
+            int(self.get_sprite_length())
+        )
+
+        width = max(
+            1,
+            int(self.get_sprite_width())
+        )
+
+        sprite = pygame.transform.scale(
+            base_sprite,
+            (
+                length,
+                width
+            )
+        )
+
+        if angle is None:
+            angle = self.angle
+
+        sprite = pygame.transform.rotate(
+            sprite,
+            -math.degrees(angle)
+        )
+
+        return self.apply_ready_glow(
+            sprite,
+            self.get_ready_glow_strength()
+        )
+
+    # -------------------------------------------------
+    # UPDATE
+    # -------------------------------------------------
 
     def update(self, dt):
         if self.cooldown_timer > 0:
             self.cooldown_timer -= dt
 
-        self.angle += self.get_rotation_speed() * dt
+        self.angle += (
+            self.get_rotation_speed()
+            * dt
+        )
 
         self.direction = pygame.Vector2(
             math.cos(self.angle),
@@ -37,58 +123,9 @@ class Bow(Weapon):
             + self.direction * self.distance
         )
 
-    def draw(self, screen):
-        direction = self.direction.normalize()
-
-        # Perpendicular to the bow direction
-        perpendicular = pygame.Vector2(
-            -direction.y,
-            direction.x
-        )
-
-        # Bow dimensions
-        bow_length = 70
-        bow_curve = 20
-
-        center = self.position
-
-        # Endpoints of the bow
-        top = center + perpendicular * (bow_length / 2)
-        bottom = center - perpendicular * (bow_length / 2)
-
-        # Bow curves away from the firing direction
-        curve = center + direction * bow_curve
-
-        # Draw the curved bow using several line segments
-        points = []
-
-        for i in range(11):
-            t = i / 10
-
-            point = (
-                (1 - t) ** 2 * top
-                + 2 * (1 - t) * t * curve
-                + t ** 2 * bottom
-            )
-
-            points.append(point)
-
-        pygame.draw.lines(
-            screen,
-            "brown",
-            False,
-            points,
-            8
-        )
-
-        # Draw the bow string
-        pygame.draw.line(
-            screen,
-            "black",
-            top,
-            bottom,
-            2
-        )
+    # -------------------------------------------------
+    # ATTACK
+    # -------------------------------------------------
 
     def attack(self):
         if not self.can_attack():
@@ -100,17 +137,18 @@ class Bow(Weapon):
 
         count = self.get_projectile_count()
 
-        # Shotgun keeps its fixed multi-arrow spread.
         if count > 1:
             spread = self.get_spread()
 
             for i in range(count):
                 offset = (
-                    (i - (count - 1) / 2)
-                    * spread
-                )
+                    i
+                    - (count - 1) / 2
+                ) * spread
 
-                direction = self.direction.rotate(offset)
+                direction = (
+                    self.direction.rotate(offset)
+                )
 
                 projectiles.append(
                     Arrow(
@@ -129,7 +167,6 @@ class Bow(Weapon):
                     )
                 )
 
-        # Machinegun fires one arrow with random spread.
         else:
             spread = self.get_spread()
 
@@ -138,7 +175,9 @@ class Bow(Weapon):
                 spread
             )
 
-            direction = self.direction.rotate(offset)
+            direction = (
+                self.direction.rotate(offset)
+            )
 
             recoil = self.get_recoil()
 
@@ -166,8 +205,9 @@ class Bow(Weapon):
                 )
             )
 
-        # Bear Trap
-        trap_duration = self.get_bear_trap_duration()
+        trap_duration = (
+            self.get_bear_trap_duration()
+        )
 
         if trap_duration > 0:
             projectiles.append(
@@ -181,65 +221,9 @@ class Bow(Weapon):
 
         return projectiles
 
-    def get_projectile_speed(self):
-        speed = 500
-
-        for upgrade in self.upgrades:
-            if upgrade.name == "Aerodynamic":
-                speed *= 2 ** upgrade.stacks
-
-            elif upgrade.name == "Sniper":
-                speed *= 2 ** upgrade.stacks
-
-            elif upgrade.name == "Heavy Arrows":
-                speed *= 0.75 ** upgrade.stacks
-
-            elif upgrade.name == "MLG":
-                speed *= 4 ** upgrade.stacks
-
-        return speed
-
-    def get_recoil(self):
-        recoil = 0
-
-        for upgrade in self.upgrades:
-            if upgrade.name == "Lightweight":
-                recoil += 250 * upgrade.stacks
-
-        return recoil
-
-    def get_rotation_speed(self):
-        speed = self.rotation_speed
-
-        for upgrade in self.upgrades:
-            if upgrade.name == "Aim Sensitivity":
-                speed *= 1.5 ** upgrade.stacks
-
-            elif upgrade.name == "Sniper":
-                speed *= 0.75 ** upgrade.stacks
-
-            elif upgrade.name == "MLG":
-                speed *= 3 ** upgrade.stacks
-
-        return speed
-
-    def get_attack_cooldown(self):
-        cooldown = self.base_cooldown
-
-        for upgrade in self.upgrades:
-            if upgrade.name == "Machinegun":
-                cooldown *= 0.05 ** upgrade.stacks
-
-            elif upgrade.name == "Greatbow":
-                cooldown *= 2 ** upgrade.stacks
-
-            elif upgrade.name == "Sniper":
-                cooldown *= 1.5 ** upgrade.stacks
-
-            elif upgrade.name == "Quickdraw":
-                cooldown *= 0.5 ** upgrade.stacks
-
-        return cooldown
+    # -------------------------------------------------
+    # DAMAGE / STATS
+    # -------------------------------------------------
 
     def get_damage(self):
         damage = self.base_damage
@@ -268,6 +252,61 @@ class Bow(Weapon):
 
         return damage
 
+    def get_rotation_speed(self):
+        speed = self.rotation_speed
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Aim Sensitivity":
+                speed *= 1.5 ** upgrade.stacks
+
+            elif upgrade.name == "Sniper":
+                speed *= 0.75 ** upgrade.stacks
+
+            elif upgrade.name == "MLG":
+                speed *= 3 ** upgrade.stacks
+
+        return speed
+
+    def get_attack_cooldown(self):
+        cooldown = self.base_cooldown
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Machinegun":
+                cooldown *= 0.01 ** upgrade.stacks
+
+            elif upgrade.name == "Greatbow":
+                cooldown *= 2 ** upgrade.stacks
+
+            elif upgrade.name == "Sniper":
+                cooldown *= 1.5 ** upgrade.stacks
+
+            elif upgrade.name == "Quickdraw":
+                cooldown *= 0.5 ** upgrade.stacks
+
+        return cooldown
+
+    # -------------------------------------------------
+    # PROJECTILES
+    # -------------------------------------------------
+
+    def get_projectile_speed(self):
+        speed = 1000
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Aerodynamic":
+                speed *= 1.5 ** upgrade.stacks
+
+            elif upgrade.name == "Sniper":
+                speed *= 1.5 ** upgrade.stacks
+
+            elif upgrade.name == "Heavy Arrows":
+                speed *= 0.75 ** upgrade.stacks
+
+            elif upgrade.name == "MLG":
+                speed *= 2 ** upgrade.stacks
+
+        return speed
+
     def get_projectile_size(self):
         size = 6
 
@@ -280,12 +319,48 @@ class Bow(Weapon):
 
         return size
 
+    def get_projectile_count(self):
+        count = 1
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Shotgun":
+                count += 5 * upgrade.stacks
+
+        return count
+
+    def get_spread(self):
+        spread = 0
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Shotgun":
+                spread += 5 * upgrade.stacks
+
+            elif upgrade.name == "Machinegun":
+                spread += 10 * upgrade.stacks
+
+        return spread
+
+    def get_recoil(self):
+        recoil = 0
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Lightweight":
+                recoil += 250 * upgrade.stacks
+
+        return recoil
+
+    # -------------------------------------------------
+    # EFFECTS
+    # -------------------------------------------------
+
     def get_pincushion_duration(self):
         duration = 0
 
         for upgrade in self.upgrades:
             if upgrade.name == "Pincushion":
-                duration = 5 * upgrade.stacks
+                duration = (
+                    5 * upgrade.stacks
+                )
 
         return duration
 
@@ -310,32 +385,11 @@ class Bow(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Bear Trap":
-                duration = 5 * upgrade.stacks
+                duration = (
+                    5 * upgrade.stacks
+                )
 
         return duration
-
-    def get_projectile_count(self):
-        count = 1
-
-        for upgrade in self.upgrades:
-            if upgrade.name == "Shotgun":
-                count += 5 * upgrade.stacks
-
-        return count
-
-    def get_spread(self):
-        spread = 0
-
-        # Shotgun: fixed spread between multiple arrows
-        for upgrade in self.upgrades:
-            if upgrade.name == "Shotgun":
-                spread += 5 * upgrade.stacks
-
-            # Machinegun: random spread for the single arrow
-            elif upgrade.name == "Machinegun":
-                spread += 10 * upgrade.stacks
-
-        return spread
 
     def get_homing_force(self):
         force = 0
