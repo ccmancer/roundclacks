@@ -1,10 +1,17 @@
 import random
-
 import pygame
+from pathlib import Path
 
 from weapons.weapon import Weapon
 from upgrades.upgrade_pool import UNARMED_UPGRADES
 from entities.fire_patch import FirePatch
+
+
+SOUND_FOLDER = (
+    Path(__file__).resolve().parent.parent
+    / "assets"
+    / "sounds"
+)
 
 
 class Unarmed(Weapon):
@@ -14,11 +21,27 @@ class Unarmed(Weapon):
             0,
             0,
             20,
-            2.0,          # 2 second base cooldown
+            2.0,
             True
         )
 
         self.upgrade_pool = UNARMED_UPGRADES
+
+        # -------------------------------------------------
+        # Sounds
+        # -------------------------------------------------
+
+        self.dash_sound = pygame.mixer.Sound(
+            SOUND_FOLDER / "unarmed_dash.mp3"
+        )
+
+        self.teleport_sound = pygame.mixer.Sound(
+            SOUND_FOLDER / "unarmed_teleport.mp3"
+        )
+
+        # -------------------------------------------------
+        # Attack state
+        # -------------------------------------------------
 
         self.attack_timer = 0
         self.hit_players = set()
@@ -42,20 +65,15 @@ class Unarmed(Weapon):
 
         self.meteor_speed_stacks = 0
 
+        # -------------------------------------------------
+        # Afterimages
+        # -------------------------------------------------
+
         self.afterimages = []
         self.afterimage_spacing = 15
         self.afterimage_distance = 0
         self.last_afterimage_position = (
             self.player.position.copy()
-        )
-
-        from upgrades.upgrade import Upgrade
-        self.add_upgrade(
-            Upgrade(
-                "Blazing Fast",
-                "Common",
-                ""
-            )
         )
 
     # -------------------------------------------------
@@ -226,6 +244,9 @@ class Unarmed(Weapon):
 
         self.start_cooldown()
 
+        # Normal Unarmed attack sound.
+        self.dash_sound.play()
+
         self.attack_timer = (
             self.get_attack_duration()
         )
@@ -256,6 +277,10 @@ class Unarmed(Weapon):
             self.player.position.copy()
         )
 
+        # -------------------------------------------------
+        # Instant Transmission
+        # -------------------------------------------------
+
         if (
             self.is_meteor_combo()
             and width is not None
@@ -269,6 +294,9 @@ class Unarmed(Weapon):
             self.last_afterimage_position = (
                 self.player.position.copy()
             )
+
+            # Teleport sound.
+            self.teleport_sound.play()
 
         return []
 
@@ -311,10 +339,14 @@ class Unarmed(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Slugger":
-                damage *= 1.5 ** upgrade.stacks
+                damage *= (
+                    1.5 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Cannonball":
-                damage *= 2 ** upgrade.stacks
+                damage *= (
+                    2 ** upgrade.stacks
+                )
 
         for upgrade in self.upgrades:
             if upgrade.name == "Momentum":
@@ -374,13 +406,19 @@ class Unarmed(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Footwork":
-                multiplier *= 1.5 ** upgrade.stacks
+                multiplier *= (
+                    1.5 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Marathon Runner":
-                multiplier *= 0.75 ** upgrade.stacks
+                multiplier *= (
+                    0.75 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Cannonball":
-                multiplier *= 0.75 ** upgrade.stacks
+                multiplier *= (
+                    0.75 ** upgrade.stacks
+                )
 
         if not self.is_attacking():
             return multiplier
@@ -389,10 +427,14 @@ class Unarmed(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Sprinter":
-                multiplier *= 2 ** upgrade.stacks
+                multiplier *= (
+                    2 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Raging Demon":
-                multiplier *= 8 ** upgrade.stacks
+                multiplier *= (
+                    8 ** upgrade.stacks
+                )
 
         multiplier *= (
             self.get_pacman_speed_multiplier()
@@ -413,10 +455,14 @@ class Unarmed(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Hyperactive":
-                downtime *= 0.5 ** upgrade.stacks
+                downtime *= (
+                    0.5 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Raging Demon":
-                downtime *= 2 ** upgrade.stacks
+                downtime *= (
+                    2 ** upgrade.stacks
+                )
 
         return (
             self.get_attack_duration()
@@ -428,13 +474,19 @@ class Unarmed(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Endurance":
-                duration *= 1.5 ** upgrade.stacks
+                duration *= (
+                    1.5 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Marathon Runner":
-                duration *= 3 ** upgrade.stacks
+                duration *= (
+                    3 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Raging Demon":
-                duration *= 4 ** upgrade.stacks
+                duration *= (
+                    4 ** upgrade.stacks
+                )
 
         return duration
 
@@ -522,7 +574,7 @@ class Unarmed(Weapon):
             1
             + 0.5
             * stacks
-            * self.tunnel_speed_stacks
+            * self.tunnel_contact_players.__len__()
         )
 
     def on_tunnel_separation(self, opponent):

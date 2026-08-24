@@ -12,6 +12,12 @@ SPRITE_FOLDER = (
     / "sprites"
 )
 
+SOUND_FOLDER = (
+    Path(__file__).resolve().parent.parent
+    / "assets"
+    / "sounds"
+)
+
 
 class Explosion:
     def __init__(
@@ -75,6 +81,18 @@ class Explosion:
         self.hit_players = set()
         self.spawned = False
 
+        # Used to make sure the explosion sound only
+        # plays once.
+        self.sound_played = False
+
+        # -------------------------------------------------
+        # Sound
+        # -------------------------------------------------
+
+        self.explosion_sound = pygame.mixer.Sound(
+            SOUND_FOLDER / "bomb_explosion.mp3"
+        )
+
         # -------------------------------------------------
         # Sprites
         # -------------------------------------------------
@@ -92,16 +110,36 @@ class Explosion:
     # -------------------------------------------------
 
     def update(self, dt):
-        # Fuse / warning phase.
+        # -------------------------------------------------
+        # Fuse / warning phase
+        # -------------------------------------------------
+
         if self.startup_timer > 0:
             self.startup_timer -= dt
 
-            if self.startup_timer < 0:
+            if self.startup_timer <= 0:
                 self.startup_timer = 0
+
+                # Play explosion sound exactly when
+                # the fuse finishes.
+                if not self.sound_played:
+                    self.explosion_sound.play()
+                    self.sound_played = True
 
             return
 
-        # Explosion lifetime.
+        # -------------------------------------------------
+        # Immediate explosion
+        # -------------------------------------------------
+
+        if not self.sound_played:
+            self.explosion_sound.play()
+            self.sound_played = True
+
+        # -------------------------------------------------
+        # Explosion lifetime
+        # -------------------------------------------------
+
         self.timer -= dt
 
         if self.timer <= 0:
@@ -117,10 +155,6 @@ class Explosion:
             1,
             int(self.radius * 2)
         )
-
-        # -------------------------------------------------
-        # Choose sprite
-        # -------------------------------------------------
 
         if self.startup_timer > 0:
             sprite = self.warning_sprite
@@ -140,10 +174,6 @@ class Explosion:
             alpha = int(
                 255 * fade
             )
-
-        # -------------------------------------------------
-        # Scale
-        # -------------------------------------------------
 
         sprite = pygame.transform.scale(
             sprite,
@@ -180,7 +210,6 @@ class Explosion:
     # -------------------------------------------------
 
     def hit(self, player):
-        # Cannot hit during fuse.
         if self.startup_timer > 0:
             return []
 
@@ -191,7 +220,6 @@ class Explosion:
 
         damage = self.damage
 
-        # Owner self-damage.
         if player == self.owner:
             if self.pyromaniac_heal > 0:
                 self.owner.heal(
@@ -207,7 +235,6 @@ class Explosion:
             damage
         )
 
-        # Knockback.
         direction = (
             player.position
             - self.position
@@ -220,7 +247,6 @@ class Explosion:
                 0.2
             )
 
-        # Shellshock.
         if self.shellshock_duration > 0:
             player.apply_shellshock(
                 self.shellshock_duration

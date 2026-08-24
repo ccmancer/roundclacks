@@ -15,6 +15,12 @@ SPRITE_FOLDER = (
     / "sprites"
 )
 
+SOUND_FOLDER = (
+    Path(__file__).resolve().parent.parent
+    / "assets"
+    / "sounds"
+)
+
 
 class Bow(Weapon):
     def __init__(self, player):
@@ -30,9 +36,25 @@ class Bow(Weapon):
             80
         )
 
+        # -------------------------------------------------
+        # Sprites
+        # -------------------------------------------------
+
         self.primed_sprite = pygame.image.load(
             SPRITE_FOLDER / "bow_primed.png"
         ).convert_alpha()
+
+        # -------------------------------------------------
+        # Sound
+        # -------------------------------------------------
+
+        self.shoot_sound = pygame.mixer.Sound(
+            SOUND_FOLDER / "bow_shoot.mp3"
+        )
+
+        # -------------------------------------------------
+        # Upgrades
+        # -------------------------------------------------
 
         self.upgrade_pool = BOW_UPGRADES
 
@@ -133,6 +155,9 @@ class Bow(Weapon):
 
         self.start_cooldown()
 
+        # Play once per successful shot.
+        self.shoot_sound.play()
+
         projectiles = []
 
         count = self.get_projectile_count()
@@ -230,25 +255,39 @@ class Bow(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Machinegun":
-                damage *= 0.5 ** upgrade.stacks
+                damage *= (
+                    0.5 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Pointiness":
-                damage *= 1.25 ** upgrade.stacks
+                damage *= (
+                    1.25 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Greatbow":
-                damage *= 2 ** upgrade.stacks
+                damage *= (
+                    2 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Sniper":
-                damage *= 2 ** upgrade.stacks
+                damage *= (
+                    2 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Heavy Arrows":
-                damage *= 2 ** upgrade.stacks
+                damage *= (
+                    2 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Shotgun":
-                damage *= 0.5 ** upgrade.stacks
+                damage *= (
+                    0.5 ** upgrade.stacks
+                )
 
             elif upgrade.name == "MLG":
-                damage *= 5 ** upgrade.stacks
+                damage *= (
+                    5 ** upgrade.stacks
+                )
 
         return damage
 
@@ -257,13 +296,19 @@ class Bow(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Aim Sensitivity":
-                speed *= 1.5 ** upgrade.stacks
+                speed *= (
+                    1.5 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Sniper":
-                speed *= 0.75 ** upgrade.stacks
+                speed *= (
+                    0.75 ** upgrade.stacks
+                )
 
             elif upgrade.name == "MLG":
-                speed *= 3 ** upgrade.stacks
+                speed *= (
+                    3 ** upgrade.stacks
+                )
 
         return speed
 
@@ -272,16 +317,24 @@ class Bow(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Machinegun":
-                cooldown *= 0.01 ** upgrade.stacks
+                cooldown *= (
+                    0.01 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Greatbow":
-                cooldown *= 2 ** upgrade.stacks
+                cooldown *= (
+                    2 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Sniper":
-                cooldown *= 1.5 ** upgrade.stacks
+                cooldown *= (
+                    1.5 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Quickdraw":
-                cooldown *= 0.5 ** upgrade.stacks
+                cooldown *= (
+                    0.5 ** upgrade.stacks
+                )
 
         return cooldown
 
@@ -294,16 +347,24 @@ class Bow(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Aerodynamic":
-                speed *= 1.5 ** upgrade.stacks
+                speed *= (
+                    1.5 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Sniper":
-                speed *= 1.5 ** upgrade.stacks
+                speed *= (
+                    1.5 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Heavy Arrows":
-                speed *= 0.75 ** upgrade.stacks
+                speed *= (
+                    0.75 ** upgrade.stacks
+                )
 
             elif upgrade.name == "MLG":
-                speed *= 2 ** upgrade.stacks
+                speed *= (
+                    2 ** upgrade.stacks
+                )
 
         return speed
 
@@ -312,10 +373,14 @@ class Bow(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Greatbow":
-                size *= 1.5 ** upgrade.stacks
+                size *= (
+                    1.5 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Heavy Arrows":
-                size *= 1.5 ** upgrade.stacks
+                size *= (
+                    1.5 ** upgrade.stacks
+                )
 
         return size
 
@@ -324,7 +389,10 @@ class Bow(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Shotgun":
-                count += 5 * upgrade.stacks
+                count += (
+                    5
+                    * upgrade.stacks
+                )
 
         return count
 
@@ -333,10 +401,16 @@ class Bow(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Shotgun":
-                spread += 5 * upgrade.stacks
+                spread += (
+                    5
+                    * upgrade.stacks
+                )
 
             elif upgrade.name == "Machinegun":
-                spread += 10 * upgrade.stacks
+                spread += (
+                    10
+                    * upgrade.stacks
+                )
 
         return spread
 
@@ -345,7 +419,10 @@ class Bow(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Lightweight":
-                recoil += 250 * upgrade.stacks
+                recoil += (
+                    250
+                    * upgrade.stacks
+                )
 
         return recoil
 
@@ -359,7 +436,8 @@ class Bow(Weapon):
         for upgrade in self.upgrades:
             if upgrade.name == "Pincushion":
                 duration = (
-                    5 * upgrade.stacks
+                    5
+                    * upgrade.stacks
                 )
 
         return duration
@@ -376,7 +454,10 @@ class Bow(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Heavy Arrows":
-                force += 250 * upgrade.stacks
+                force += (
+                    250
+                    * upgrade.stacks
+                )
 
         return force
 
@@ -386,7 +467,8 @@ class Bow(Weapon):
         for upgrade in self.upgrades:
             if upgrade.name == "Bear Trap":
                 duration = (
-                    5 * upgrade.stacks
+                    5
+                    * upgrade.stacks
                 )
 
         return duration
@@ -396,7 +478,10 @@ class Bow(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Homing":
-                force += 250 * upgrade.stacks
+                force += (
+                    250
+                    * upgrade.stacks
+                )
 
         return force
 
@@ -405,7 +490,10 @@ class Bow(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Homing":
-                range_ = 250 * upgrade.stacks
+                range_ = (
+                    250
+                    * upgrade.stacks
+                )
 
         return range_
 
@@ -414,6 +502,9 @@ class Bow(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Ricochet":
-                bounces += 5 * upgrade.stacks
+                bounces += (
+                    5
+                    * upgrade.stacks
+                )
 
         return bounces

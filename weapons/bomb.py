@@ -14,6 +14,12 @@ SPRITE_FOLDER = (
     / "sprites"
 )
 
+SOUND_FOLDER = (
+    Path(__file__).resolve().parent.parent
+    / "assets"
+    / "sounds"
+)
+
 
 class Bomb(Weapon):
     def __init__(self, player):
@@ -22,17 +28,20 @@ class Bomb(Weapon):
             50,
             3,
             25,
-            2.0,          # 2 second base cooldown
+            2.0,
             False,
             "bomb.png",
             60,
             60
         )
 
-        # Sprite shown while the bomb is on cooldown.
         self.missing_sprite = pygame.image.load(
             SPRITE_FOLDER / "bomb_missing.png"
         ).convert_alpha()
+
+        self.throw_sound = pygame.mixer.Sound(
+            SOUND_FOLDER / "bomb_throw.mp3"
+        )
 
         self.upgrade_pool = BOMB_UPGRADES
 
@@ -80,6 +89,9 @@ class Bomb(Weapon):
             return []
 
         self.start_cooldown()
+
+        # Play throw sound.
+        self.throw_sound.play()
 
         spread = self.get_spread()
 
@@ -238,24 +250,19 @@ class Bomb(Weapon):
             elif upgrade.name == "Madness":
                 madness_stacks += upgrade.stacks
 
-        # Pyromaniac completely removes self-damage.
         if pyromaniac_stacks > 0:
             return 0
 
         multiplier = 1
 
-        # Professional reduces self-damage.
         if professional_stacks > 0:
             multiplier *= (
-                0.5
-                ** professional_stacks
+                0.5 ** professional_stacks
             )
 
-        # Madness increases self-damage by 50% per stack.
         if madness_stacks > 0:
             multiplier *= (
-                1.5
-                ** madness_stacks
+                1.5 ** madness_stacks
             )
 
         return multiplier
@@ -266,8 +273,7 @@ class Bomb(Weapon):
         for upgrade in self.upgrades:
             if upgrade.name == "Shellshock":
                 duration = (
-                    5
-                    * upgrade.stacks
+                    5 * upgrade.stacks
                 )
 
         return duration
@@ -278,8 +284,7 @@ class Bomb(Weapon):
         for upgrade in self.upgrades:
             if upgrade.name == "Mine":
                 duration = (
-                    5
-                    * upgrade.stacks
+                    5 * upgrade.stacks
                 )
 
         return duration
@@ -290,8 +295,7 @@ class Bomb(Weapon):
         for upgrade in self.upgrades:
             if upgrade.name == "Cluster Bomb":
                 count += (
-                    8
-                    * upgrade.stacks
+                    8 * upgrade.stacks
                 )
 
         return count
@@ -317,9 +321,7 @@ class Bomb(Weapon):
                 stacks += upgrade.stacks
 
         if stacks > 0:
-            stacks += (
-                self.get_professional_stacks()
-            )
+            stacks += self.get_professional_stacks()
 
         return stacks
 

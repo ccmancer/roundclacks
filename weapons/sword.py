@@ -1,9 +1,17 @@
 import pygame
 import math
+from pathlib import Path
 
 from weapons.weapon import Weapon
 from upgrades.upgrade_pool import SWORD_UPGRADES
 from entities.magic_slash import MagicSlash
+
+
+SOUND_FOLDER = (
+    Path(__file__).resolve().parent.parent
+    / "assets"
+    / "sounds"
+)
 
 
 class Sword(Weapon):
@@ -44,6 +52,11 @@ class Sword(Weapon):
         self.attack_angle = 0
 
         self.base_attack_rotation_speed = 20
+
+        # Swing sound.
+        self.swing_sound = pygame.mixer.Sound(
+            SOUND_FOLDER / "sword_swing.mp3"
+        )
 
         self.upgrade_pool = SWORD_UPGRADES
 
@@ -111,6 +124,10 @@ class Sword(Weapon):
     def draw(self, screen):
         blade_count = self.get_blade_count()
 
+        glow_strength = (
+            self.get_ready_glow_strength()
+        )
+
         for i in range(blade_count):
             angle = (
                 self.angle
@@ -131,7 +148,7 @@ class Sword(Weapon):
 
             sprite = self.apply_ready_glow(
                 sprite,
-                self.get_ready_glow_strength()
+                glow_strength
             )
 
             sprite_position = (
@@ -210,6 +227,20 @@ class Sword(Weapon):
         return width
 
     # -------------------------------------------------
+    # PLAYER STATS
+    # -------------------------------------------------
+
+    def get_speed_multiplier(self):
+        multiplier = (
+            super().get_speed_multiplier()
+        )
+
+        # Sword's base movement speed.
+        multiplier *= 1.25
+
+        return multiplier
+
+    # -------------------------------------------------
     # ATTACK
     # -------------------------------------------------
 
@@ -218,6 +249,9 @@ class Sword(Weapon):
             return []
 
         self.start_cooldown()
+
+        # Play sword swing sound.
+        self.swing_sound.play()
 
         step_force = self.get_step_force()
 

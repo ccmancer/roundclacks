@@ -39,6 +39,10 @@ class Weapon:
 
         self.cooldown_timer = 0
 
+        # -------------------------------------------------
+        # Weapon position
+        # -------------------------------------------------
+
         self.angle = 0
         self.position = pygame.Vector2()
         self.direction = pygame.Vector2(1, 0)
@@ -66,6 +70,9 @@ class Weapon:
     def update(self, dt):
         if self.cooldown_timer > 0:
             self.cooldown_timer -= dt
+
+            if self.cooldown_timer < 0:
+                self.cooldown_timer = 0
 
         self.angle += (
             self.get_rotation_speed()

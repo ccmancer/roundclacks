@@ -138,7 +138,7 @@ class RoundState(State):
         self.check_round_end()
 
     def draw(self, screen):
-        screen.fill("grey")
+        screen.fill((255, 255, 200))
 
         self.player1.draw(screen)
         self.player2.draw(screen)

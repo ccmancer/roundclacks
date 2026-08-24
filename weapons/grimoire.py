@@ -13,15 +13,21 @@ SPRITE_FOLDER = (
     / "sprites"
 )
 
+SOUND_FOLDER = (
+    Path(__file__).resolve().parent.parent
+    / "assets"
+    / "sounds"
+)
+
 
 class Grimoire(Weapon):
     def __init__(self, player):
         super().__init__(
             player,
-            50,     # orbit distance
-            3,      # rotation speed
-            1,      # base tick damage
-            2.0,    # base cooldown
+            50,
+            3,
+            1,
+            2.0,
             False,
             "grimoire.png",
             80,
@@ -32,12 +38,15 @@ class Grimoire(Weapon):
             SPRITE_FOLDER / "grimoire_attack.png"
         ).convert_alpha()
 
+        self.beam_sound = pygame.mixer.Sound(
+            SOUND_FOLDER / "grimoire_beam.mp3"
+        )
+
+        self.beam_sound_channel = None
+
         self.upgrade_pool = GRIMOIRE_UPGRADES
 
-        # Slows movement/orbit while the beam is active.
         self.attack_slow_timer = 0
-
-        # Tribeam self-damage timer.
         self.tribeam_self_damage_timer = 0
 
     # -------------------------------------------------
@@ -45,14 +54,25 @@ class Grimoire(Weapon):
     # -------------------------------------------------
 
     def update(self, dt):
+        was_attacking = self.is_attacking()
+
         if self.cooldown_timer > 0:
             self.cooldown_timer -= dt
+
+            if self.cooldown_timer < 0:
+                self.cooldown_timer = 0
 
         if self.attack_slow_timer > 0:
             self.attack_slow_timer -= dt
 
             if self.attack_slow_timer < 0:
                 self.attack_slow_timer = 0
+
+        if (
+            was_attacking
+            and not self.is_attacking()
+        ):
+            self.stop_beam_sound()
 
         if self.tribeam_self_damage_timer > 0:
             self.tribeam_self_damage_timer -= dt
@@ -66,7 +86,7 @@ class Grimoire(Weapon):
 
         if (
             tribeam_damage > 0
-            and self.attack_slow_timer > 0
+            and self.is_attacking()
             and self.tribeam_self_damage_timer <= 0
         ):
             self.player.take_damage(
@@ -76,10 +96,6 @@ class Grimoire(Weapon):
             self.tribeam_self_damage_timer = (
                 self.get_tick_interval()
             )
-
-        # -------------------------------------------------
-        # Orbit
-        # -------------------------------------------------
 
         self.angle += (
             self.get_rotation_speed()
@@ -109,12 +125,38 @@ class Grimoire(Weapon):
         )
 
     # -------------------------------------------------
+    # STATE
+    # -------------------------------------------------
+
+    def is_attacking(self):
+        return self.attack_slow_timer > 0
+
+    # -------------------------------------------------
+    # SOUND
+    # -------------------------------------------------
+
+    def start_beam_sound(self):
+        if (
+            self.beam_sound_channel is not None
+            and self.beam_sound_channel.get_busy()
+        ):
+            return
+
+        self.beam_sound_channel = (
+            self.beam_sound.play(-1)
+        )
+
+    def stop_beam_sound(self):
+        if self.beam_sound_channel is not None:
+            self.beam_sound_channel.stop()
+            self.beam_sound_channel = None
+
+    # -------------------------------------------------
     # SPRITE
     # -------------------------------------------------
 
     def get_sprite(self):
-        # Normal sprite when not attacking.
-        if self.attack_slow_timer > 0:
+        if self.is_attacking():
             base_sprite = self.attack_sprite
         else:
             base_sprite = self.sprite
@@ -127,20 +169,21 @@ class Grimoire(Weapon):
             )
         )
 
-        # The sprite points outward from the player.
-        angle = math.degrees(
-            self.angle
-        )
-
         sprite = pygame.transform.rotate(
             sprite,
-            -angle
+            -math.degrees(self.angle)
         )
 
-        return self.apply_ready_glow(
-            sprite,
-            self.get_ready_glow_strength()
-        )
+        if (
+            self.can_attack()
+            and not self.is_attacking()
+        ):
+            sprite = self.apply_ready_glow(
+                sprite,
+                self.get_ready_glow_strength()
+            )
+
+        return sprite
 
     def get_sprite_length(self):
         return self.base_sprite_length
@@ -162,6 +205,8 @@ class Grimoire(Weapon):
             self.get_beam_duration()
         )
 
+        self.start_beam_sound()
+
         beams = []
 
         count = self.get_book_count()
@@ -171,7 +216,8 @@ class Grimoire(Weapon):
 
             if count > 1:
                 offset = (
-                    i - (count - 1) / 2
+                    i
+                    - (count - 1) / 2
                 ) * 20
 
             beams.append(
@@ -201,7 +247,7 @@ class Grimoire(Weapon):
             super().get_speed_multiplier()
         )
 
-        if self.attack_slow_timer > 0:
+        if self.is_attacking():
             multiplier *= 0.5
 
         return multiplier
@@ -211,7 +257,7 @@ class Grimoire(Weapon):
             damage
         )
 
-        if self.attack_slow_timer > 0:
+        if self.is_attacking():
             for upgrade in self.upgrades:
                 if upgrade.name == "Magic Barrier":
                     damage *= (
@@ -255,7 +301,7 @@ class Grimoire(Weapon):
     def get_rotation_speed(self):
         speed = self.rotation_speed
 
-        if self.attack_slow_timer > 0:
+        if self.is_attacking():
             speed *= 0.5
 
         for upgrade in self.upgrades:
@@ -312,8 +358,7 @@ class Grimoire(Weapon):
 
             elif upgrade.name == "Fire Enchantment":
                 interval *= (
-                    (1 / 3)
-                    ** upgrade.stacks
+                    (1 / 3) ** upgrade.stacks
                 )
 
             elif upgrade.name == "Earth Enchantment":
@@ -323,8 +368,7 @@ class Grimoire(Weapon):
 
             elif upgrade.name == "Master Spark":
                 interval *= (
-                    (1 / 3)
-                    ** upgrade.stacks
+                    (1 / 3) ** upgrade.stacks
                 )
 
         return interval
@@ -392,3 +436,5 @@ class Grimoire(Weapon):
 
         self.attack_slow_timer = 0
         self.tribeam_self_damage_timer = 0
+
+        self.stop_beam_sound()

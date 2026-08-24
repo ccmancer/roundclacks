@@ -11,6 +11,12 @@ SPRITE_FOLDER = (
     / "sprites"
 )
 
+SOUND_FOLDER = (
+    Path(__file__).resolve().parent.parent
+    / "assets"
+    / "sounds"
+)
+
 
 class Player:
     def __init__(
@@ -29,30 +35,94 @@ class Player:
         self.color = color
         self.speed = speed
 
+        # -------------------------------------------------
+        # Sprite / Sound
+        # -------------------------------------------------
+
         self.sprite = pygame.image.load(
             SPRITE_FOLDER / "player.png"
         ).convert_alpha()
 
+        self.hurt_sound = pygame.mixer.Sound(
+            SOUND_FOLDER / "hurt.mp3"
+        )
+
+        # Prevent rapid repeated hurt sounds from
+        # becoming too loud.
+        self.hurt_sound_timer = 0
+        self.hurt_sound_cooldown = 0.1
+
+        # -------------------------------------------------
+        # Weapon
+        # -------------------------------------------------
+
         self.weapon = weapon_class(self)
         self.attack_key = attack_key
+
+        # -------------------------------------------------
+        # Health
+        # -------------------------------------------------
 
         self.base_max_health = 100
         self.max_health = self.get_max_health()
         self.health = self.max_health
+
+        # -------------------------------------------------
+        # Movement
+        # -------------------------------------------------
 
         self.reset_velocity(speed)
 
         self.external_velocity = pygame.Vector2()
         self.external_velocity_timer = 0
 
+        # -------------------------------------------------
+        # Status Effects
+        # -------------------------------------------------
+
+        # Pincushion.
         self.pinned_arrows = []
+
+        # Shellshock.
         self.shellshock_timer = 0
+
+        # -------------------------------------------------
+        # Damage Flash
+        # -------------------------------------------------
+
+        self.damage_flash_timer = 0
+        self.damage_flash_duration = 0.5
 
     # -------------------------------------------------
     # UPDATE / DRAW
     # -------------------------------------------------
 
     def update(self, dt, width, height):
+        # -------------------------------------------------
+        # Hurt sound cooldown
+        # -------------------------------------------------
+
+        if self.hurt_sound_timer > 0:
+            self.hurt_sound_timer -= dt
+
+            if self.hurt_sound_timer < 0:
+                self.hurt_sound_timer = 0
+
+        # -------------------------------------------------
+        # Damage flash
+        # -------------------------------------------------
+
+        if self.damage_flash_timer > 0:
+            self.damage_flash_timer -= dt
+
+            if self.damage_flash_timer < 0:
+                self.damage_flash_timer = 0
+
+        # -------------------------------------------------
+        # Movement
+        # -------------------------------------------------
+
+        # Preserve movement direction while updating speed.
         if self.velocity.length_squared() > 0:
             self.velocity.scale_to_length(
                 self.get_speed()
@@ -63,28 +133,46 @@ class Player:
             + self.external_velocity
         ) * dt
 
+        # -------------------------------------------------
+        # Shellshock
+        # -------------------------------------------------
+
         if self.shellshock_timer > 0:
             self.shellshock_timer -= dt
 
             if self.shellshock_timer < 0:
                 self.shellshock_timer = 0
 
+        # -------------------------------------------------
+        # External movement
+        # -------------------------------------------------
+
         if self.external_velocity_timer > 0:
             self.external_velocity_timer -= dt
         else:
             self.external_velocity = pygame.Vector2()
+
+        # -------------------------------------------------
+        # Weapon-specific behavior
+        # -------------------------------------------------
 
         self.weapon.handle_player_bounds(
             width,
             height
         )
 
+        # Update weapon after player movement.
         self.weapon.update(dt)
 
     def draw(self, screen):
+        # Weapon-specific visuals behind player.
         self.weapon.draw_before_player(
             screen
         )
+
+        # -------------------------------------------------
+        # Player sprite
+        # -------------------------------------------------
 
         sprite = self.get_sprite()
 
@@ -96,6 +184,10 @@ class Player:
             sprite,
             rect
         )
+
+        # -------------------------------------------------
+        # Health number
+        # -------------------------------------------------
 
         health_text = HEALTH_FONT.render(
             str(round(self.health)),
@@ -116,6 +208,10 @@ class Player:
             health_text,
             health_rect
         )
+
+        # -------------------------------------------------
+        # Weapon
+        # -------------------------------------------------
 
         self.weapon.draw(screen)
 
@@ -148,6 +244,7 @@ class Player:
             self.color
         )
 
+        # Apply player color.
         sprite.fill(
             (
                 color.r,
@@ -157,6 +254,35 @@ class Player:
             ),
             special_flags=pygame.BLEND_RGBA_MULT
         )
+
+        # -------------------------------------------------
+        # Damage flash
+        # -------------------------------------------------
+
+        if self.damage_flash_timer > 0:
+            flash_strength = (
+                self.damage_flash_timer
+                / self.damage_flash_duration
+            )
+
+            amount = int(
+                255 * flash_strength
+            )
+
+            sprite.fill(
+                (
+                    amount,
+                    amount,
+                    amount
+                ),
+                special_flags=pygame.BLEND_RGB_ADD
+            )
+
+            return sprite
+
+        # -------------------------------------------------
+        # Weapon sprite effects
+        # -------------------------------------------------
 
         return self.weapon.modify_player_sprite(
             sprite
@@ -172,6 +298,19 @@ class Player:
         )
 
         self.health -= damage
+
+        # Restart damage flash.
+        self.damage_flash_timer = (
+            self.damage_flash_duration
+        )
+
+        # Play hurt sound with a very small cooldown.
+        if self.hurt_sound_timer <= 0:
+            self.hurt_sound.play()
+
+            self.hurt_sound_timer = (
+                self.hurt_sound_cooldown
+            )
 
     def heal(self, amount):
         self.health = min(
@@ -213,12 +352,14 @@ class Player:
             * self.weapon.get_speed_multiplier()
         )
 
+        # Pincushion.
         for arrow in self.pinned_arrows:
             if arrow.is_pincushion_active_for(self):
                 speed *= (
                     arrow.get_pincushion_speed_multiplier()
                 )
 
+        # Shellshock.
         if self.shellshock_timer > 0:
             speed *= 0.5
 
@@ -294,5 +435,8 @@ class Player:
 
         self.shellshock_timer = 0
         self.pinned_arrows = []
+
+        self.damage_flash_timer = 0
+        self.hurt_sound_timer = 0
 
         self.weapon.reset()
