@@ -13,6 +13,10 @@ class Match:
 
         self.round_number = 1
 
+    # -------------------------------------------------
+    # SCORE
+    # -------------------------------------------------
+
     def record_win(self, winner):
         if winner == self.player1:
             self.player1_wins += 1
@@ -34,3 +38,29 @@ class Match:
             return self.player2
 
         return None
+
+    # -------------------------------------------------
+    # RESET
+    # -------------------------------------------------
+
+    def reset(self):
+        self.player1_wins = 0
+        self.player2_wins = 0
+        self.round_number = 1
+
+        # Completely remove previous upgrades.
+        self.player1.weapon.upgrades.clear()
+        self.player2.weapon.upgrades.clear()
+
+        # Reset weapon state.
+        self.player1.weapon.reset()
+        self.player2.weapon.reset()
+
+        # Reset players.
+        self.player1.reset(
+            (150, 360)
+        )
+
+        self.player2.reset(
+            (570, 360)
+        )

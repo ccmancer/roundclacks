@@ -10,7 +10,8 @@ from entities.fire_patch import FirePatch
 SOUND_FOLDER = (
     Path(__file__).resolve().parent.parent
     / "assets"
-    / "sounds"
+    / "audio"
+    / "game"
 )
 
 
@@ -31,11 +32,11 @@ class Unarmed(Weapon):
         # Sounds
         # -------------------------------------------------
 
-        self.dash_sound = pygame.mixer.Sound(
+        self.dash_sound = self.player.game.audio.load_game_sound(
             SOUND_FOLDER / "unarmed_dash.mp3"
         )
 
-        self.teleport_sound = pygame.mixer.Sound(
+        self.teleport_sound = self.player.game.audio.load_game_sound(
             SOUND_FOLDER / "unarmed_teleport.mp3"
         )
 
@@ -52,16 +53,32 @@ class Unarmed(Weapon):
         )
         self.hit_reset_distance = 50
 
+        # -------------------------------------------------
+        # PAC-MAN
+        # -------------------------------------------------
+
         self.pacman_speed_stacks = 0
+
+        # -------------------------------------------------
+        # Tunnel Effect
+        # -------------------------------------------------
 
         self.tunnel_speed_stacks = 0
         self.tunnel_contact_players = set()
+
+        # -------------------------------------------------
+        # Blazing Fast
+        # -------------------------------------------------
 
         self.fire_trail_distance = 0
         self.last_fire_position = (
             self.player.position.copy()
         )
         self.spawned_entities = []
+
+        # -------------------------------------------------
+        # Instant Transmission
+        # -------------------------------------------------
 
         self.meteor_speed_stacks = 0
 
@@ -81,7 +98,12 @@ class Unarmed(Weapon):
     # -------------------------------------------------
 
     def update(self, dt):
-        super().update(dt)
+        # Weapon cooldown.
+        if self.cooldown_timer > 0:
+            self.cooldown_timer -= dt
+
+            if self.cooldown_timer < 0:
+                self.cooldown_timer = 0
 
         self.spawned_entities = []
 
@@ -105,6 +127,7 @@ class Unarmed(Weapon):
                 current_position.copy()
             )
 
+            # Allow another hit after enough movement.
             if (
                 self.attack_distance
                 >= self.hit_reset_distance
@@ -112,6 +135,7 @@ class Unarmed(Weapon):
                 self.hit_players.clear()
                 self.attack_distance = 0
 
+            # Blazing Fast.
             if self.has_blazing_fast():
                 self.spawn_fire_trail(
                     current_position,
@@ -121,8 +145,15 @@ class Unarmed(Weapon):
 
             self.attack_timer -= dt
 
+            # -------------------------------------------------
+            # Attack ends -> cooldown begins
+            # -------------------------------------------------
+
             if self.attack_timer <= 0:
                 self.attack_timer = 0
+
+                # Cooldown always starts AFTER the attack.
+                self.start_cooldown()
 
                 self.hit_players.clear()
                 self.attack_distance = 0
@@ -242,9 +273,9 @@ class Unarmed(Weapon):
         if not self.can_attack():
             return []
 
-        self.start_cooldown()
+        # Do NOT start cooldown here.
+        # Cooldown starts when the attack ends.
 
-        # Normal Unarmed attack sound.
         self.dash_sound.play()
 
         self.attack_timer = (
@@ -295,7 +326,6 @@ class Unarmed(Weapon):
                 self.player.position.copy()
             )
 
-            # Teleport sound.
             self.teleport_sound.play()
 
         return []
@@ -318,6 +348,19 @@ class Unarmed(Weapon):
         opponent.take_damage(
             self.get_damage()
         )
+
+        # -------------------------------------------------
+        # Raging Demon
+        # -------------------------------------------------
+
+        if self.get_raging_demon_stacks() > 0:
+            self.attack_timer = (
+                self.get_attack_duration()
+            )
+
+        # -------------------------------------------------
+        # Tunnel Effect
+        # -------------------------------------------------
 
         if (
             self.is_tunnel_effect()
@@ -348,6 +391,7 @@ class Unarmed(Weapon):
                     2 ** upgrade.stacks
                 )
 
+        # Momentum.
         for upgrade in self.upgrades:
             if upgrade.name == "Momentum":
                 normal_attack_speed = (
@@ -402,6 +446,7 @@ class Unarmed(Weapon):
             super().get_speed_multiplier()
         )
 
+        # Unarmed is naturally faster.
         multiplier *= 1.5
 
         for upgrade in self.upgrades:
@@ -423,6 +468,7 @@ class Unarmed(Weapon):
         if not self.is_attacking():
             return multiplier
 
+        # Base attack burst.
         multiplier *= 3
 
         for upgrade in self.upgrades:
@@ -432,18 +478,22 @@ class Unarmed(Weapon):
                 )
 
             elif upgrade.name == "Raging Demon":
+                # +100% speed per stack.
                 multiplier *= (
-                    8 ** upgrade.stacks
+                    2 ** upgrade.stacks
                 )
 
+        # PAC-MAN.
         multiplier *= (
             self.get_pacman_speed_multiplier()
         )
 
+        # Tunnel Effect.
         multiplier *= (
             self.get_tunnel_speed_multiplier()
         )
 
+        # Instant Transmission.
         multiplier *= (
             self.get_meteor_speed_multiplier()
         )
@@ -451,6 +501,7 @@ class Unarmed(Weapon):
         return multiplier
 
     def get_attack_cooldown(self):
+        # This is the cooldown AFTER the attack ends.
         downtime = self.base_cooldown
 
         for upgrade in self.upgrades:
@@ -460,14 +511,12 @@ class Unarmed(Weapon):
                 )
 
             elif upgrade.name == "Raging Demon":
+                # +50% cooldown per stack.
                 downtime *= (
-                    2 ** upgrade.stacks
+                    1.5 ** upgrade.stacks
                 )
 
-        return (
-            self.get_attack_duration()
-            + downtime
-        )
+        return downtime
 
     def get_attack_duration(self):
         duration = 0.4
@@ -484,11 +533,25 @@ class Unarmed(Weapon):
                 )
 
             elif upgrade.name == "Raging Demon":
+                # +100% duration per stack.
                 duration *= (
-                    4 ** upgrade.stacks
+                    2 ** upgrade.stacks
                 )
 
         return duration
+
+    # -------------------------------------------------
+    # RAGING DEMON
+    # -------------------------------------------------
+
+    def get_raging_demon_stacks(self):
+        stacks = 0
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Raging Demon":
+                stacks += upgrade.stacks
+
+        return stacks
 
     # -------------------------------------------------
     # PAC-MAN
@@ -515,6 +578,7 @@ class Unarmed(Weapon):
 
         wrapped = False
 
+        # Left -> right.
         if self.player.position.x + radius < 0:
             self.player.position.x = (
                 width + radius
@@ -525,6 +589,7 @@ class Unarmed(Weapon):
             self.player.position.x = -radius
             wrapped = True
 
+        # Top -> bottom.
         if self.player.position.y + radius < 0:
             self.player.position.y = (
                 height + radius
@@ -574,7 +639,7 @@ class Unarmed(Weapon):
             1
             + 0.5
             * stacks
-            * self.tunnel_contact_players.__len__()
+            * self.tunnel_speed_stacks
         )
 
     def on_tunnel_separation(self, opponent):

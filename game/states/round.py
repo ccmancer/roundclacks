@@ -1,4 +1,5 @@
 import pygame
+import colorsys
 
 from game.states.state import State
 
@@ -11,11 +12,18 @@ from physics.collision import (
 )
 
 from weapons.unarmed import Unarmed
+from ui.upgrade_card import UpgradeCard
 
 
 class RoundState(State):
-    def __init__(self, match_state):
-        super().__init__(match_state.game)
+
+    def __init__(
+        self,
+        match_state
+    ):
+        super().__init__(
+            match_state.game
+        )
 
         self.match_state = match_state
 
@@ -24,20 +32,97 @@ class RoundState(State):
 
         self.projectiles = []
 
-        self.player1.reset((150, 360))
-        self.player2.reset((570, 360))
+        # -------------------------------------------------
+        # Reset players for the new round
+        # -------------------------------------------------
 
-    def handle_events(self, events):
+        self.player1.reset(
+            (150, 360)
+        )
+
+        self.player2.reset(
+            (570, 360)
+        )
+
+        # -------------------------------------------------
+        # Background
+        # -------------------------------------------------
+
+        self.background_time = 0
+
+        # -------------------------------------------------
+        # Upgrade HUD
+        # -------------------------------------------------
+
+        self.player1_upgrade_cards = [
+            UpgradeCard(
+                upgrade,
+                (
+                    10
+                    + i * (
+                        UpgradeCard.MINI_SIZE
+                        + UpgradeCard.MINI_GAP
+                    ),
+                    42
+                ),
+                expand_direction="right"
+            )
+            for i, upgrade in enumerate(
+                self.player1.weapon.upgrades
+            )
+        ]
+
+        self.player2_upgrade_cards = [
+            UpgradeCard(
+                upgrade,
+                expand_direction="left"
+            )
+            for upgrade in self.player2.weapon.upgrades
+        ]
+
+        self.update_player2_upgrade_positions()
+
+    # -------------------------------------------------
+    # EVENTS
+    # -------------------------------------------------
+
+    def handle_events(
+        self,
+        events
+    ):
         for event in events:
+
             if event.type != pygame.KEYDOWN:
                 continue
 
             if event.key == pygame.K_ESCAPE:
                 self.game.running = False
 
-    def update(self, dt):
-        width = self.game.screen.get_width()
-        height = self.game.screen.get_height()
+    # -------------------------------------------------
+    # UPDATE
+    # -------------------------------------------------
+
+    def update(
+        self,
+        dt
+    ):
+        width = (
+            self.game.screen.get_width()
+        )
+
+        height = (
+            self.game.screen.get_height()
+        )
+
+        # -------------------------------------------------
+        # Background
+        # -------------------------------------------------
+
+        self.background_time += dt
+
+        # -------------------------------------------------
+        # Players
+        # -------------------------------------------------
 
         self.player1.update(
             dt,
@@ -51,7 +136,10 @@ class RoundState(State):
             height
         )
 
-        # Collect entities spawned by weapons.
+        # -------------------------------------------------
+        # Weapon-spawned entities
+        # -------------------------------------------------
+
         if hasattr(
             self.player1.weapon,
             "spawned_entities"
@@ -59,6 +147,8 @@ class RoundState(State):
             self.projectiles.extend(
                 self.player1.weapon.spawned_entities
             )
+
+            self.player1.weapon.spawned_entities.clear()
 
         if hasattr(
             self.player2.weapon,
@@ -68,16 +158,26 @@ class RoundState(State):
                 self.player2.weapon.spawned_entities
             )
 
+            self.player2.weapon.spawned_entities.clear()
+
+        # -------------------------------------------------
+        # Weapon input
+        # -------------------------------------------------
+
         self.handle_weapon_input(
             width,
             height
         )
 
-        # Player-player collision.
+        # -------------------------------------------------
+        # Player collision
+        # -------------------------------------------------
+
         if check_circle_collision(
             self.player1,
             self.player2
         ):
+
             tunnel_active = (
                 (
                     isinstance(
@@ -99,17 +199,21 @@ class RoundState(State):
             )
 
             if not tunnel_active:
+
                 resolve_circle_collision(
                     self.player1,
                     self.player2
                 )
 
         else:
+
             if isinstance(
                 self.player1.weapon,
                 Unarmed
             ):
+
                 if self.player1.weapon.is_tunnel_effect():
+
                     self.player1.weapon.on_tunnel_separation(
                         self.player2
                     )
@@ -118,12 +222,22 @@ class RoundState(State):
                 self.player2.weapon,
                 Unarmed
             ):
+
                 if self.player2.weapon.is_tunnel_effect():
+
                     self.player2.weapon.on_tunnel_separation(
                         self.player1
                     )
 
+        # -------------------------------------------------
+        # Weapon collisions
+        # -------------------------------------------------
+
         self.handle_weapon_collisions()
+
+        # -------------------------------------------------
+        # Projectiles
+        # -------------------------------------------------
 
         self.update_projectiles(
             dt,
@@ -135,35 +249,441 @@ class RoundState(State):
 
         self.remove_dead_projectiles()
 
+        # -------------------------------------------------
+        # HUD
+        # -------------------------------------------------
+
+        self.update_upgrade_hud()
+
+        # -------------------------------------------------
+        # Round end
+        # -------------------------------------------------
+
         self.check_round_end()
 
-    def draw(self, screen):
-        screen.fill((255, 255, 200))
+    # -------------------------------------------------
+    # BACKGROUND
+    # -------------------------------------------------
 
-        self.player1.draw(screen)
-        self.player2.draw(screen)
+    def get_background_color(
+        self
+    ):
+        hue = (
+            self.background_time
+            / 12
+        ) % 1
+
+        rgb = colorsys.hsv_to_rgb(
+            hue,
+            0.25,
+            1.0
+        )
+
+        return tuple(
+            int(value * 255)
+            for value in rgb
+        )
+
+    # -------------------------------------------------
+    # UPGRADE HUD
+    # -------------------------------------------------
+
+    def update_upgrade_hud(
+        self
+    ):
+        mouse_position = pygame.mouse.get_pos()
+
+        hovered_card = None
+
+        # -------------------------------------------------
+        # Player 1
+        # -------------------------------------------------
+
+        for card in self.player1_upgrade_cards:
+
+            if card.get_mini_rect().collidepoint(
+                mouse_position
+            ):
+                hovered_card = card
+                break
+
+        # -------------------------------------------------
+        # Player 2
+        # -------------------------------------------------
+
+        if hovered_card is None:
+
+            for card in self.player2_upgrade_cards:
+
+                if card.get_mini_rect().collidepoint(
+                    mouse_position
+                ):
+                    hovered_card = card
+                    break
+
+        # -------------------------------------------------
+        # Display state
+        # -------------------------------------------------
+
+        for card in self.player1_upgrade_cards:
+
+            card.set_display_mode(
+                "mini"
+            )
+
+            card.set_hovered(
+                card is hovered_card
+            )
+
+        for card in self.player2_upgrade_cards:
+
+            card.set_display_mode(
+                "mini"
+            )
+
+            card.set_hovered(
+                card is hovered_card
+            )
+
+        self.update_player2_upgrade_positions()
+
+    def update_player2_upgrade_positions(
+        self
+    ):
+        screen_width = (
+            self.game.screen.get_width()
+        )
+
+        for i, card in enumerate(
+            self.player2_upgrade_cards
+        ):
+
+            x = (
+                screen_width
+                - 10
+                - UpgradeCard.MINI_SIZE
+                - i * (
+                    UpgradeCard.MINI_SIZE
+                    + UpgradeCard.MINI_GAP
+                )
+            )
+
+            card.set_position(
+                (
+                    x,
+                    42
+                )
+            )
+
+    # -------------------------------------------------
+    # OUTLINED TEXT
+    # -------------------------------------------------
+
+    def draw_outlined_text(
+        self,
+        screen,
+        text,
+        font,
+        position,
+        color,
+        outline_color=(0, 0, 0),
+        outline_width=2
+    ):
+        outline = font.render(
+            text,
+            True,
+            outline_color
+        )
+
+        foreground = font.render(
+            text,
+            True,
+            color
+        )
+
+        x, y = position
+
+        for dx in range(
+            -outline_width,
+            outline_width + 1
+        ):
+
+            for dy in range(
+                -outline_width,
+                outline_width + 1
+            ):
+
+                if dx == 0 and dy == 0:
+                    continue
+
+                screen.blit(
+                    outline,
+                    (
+                        x + dx,
+                        y + dy
+                    )
+                )
+
+        screen.blit(
+            foreground,
+            position
+        )
+
+    # -------------------------------------------------
+    # HUD
+    # -------------------------------------------------
+
+    def draw_upgrade_hud(
+        self,
+        screen
+    ):
+        font = pygame.font.Font(
+            None,
+            24
+        )
+
+        # -------------------------------------------------
+        # Player names
+        # -------------------------------------------------
+
+        player1_name = (
+            self.player1.name
+        )
+
+        player2_name = (
+            self.player2.name
+        )
+
+        player1_text = font.render(
+            player1_name,
+            True,
+            self.player1.color
+        )
+
+        player2_text = font.render(
+            player2_name,
+            True,
+            self.player2.color
+        )
+
+        self.draw_outlined_text(
+            screen,
+            player1_name,
+            font,
+            (
+                10,
+                10
+            ),
+            self.player1.color
+        )
+
+        player2_rect = player2_text.get_rect(
+            top=10,
+            right=(
+                screen.get_width()
+                - 10
+            )
+        )
+
+        self.draw_outlined_text(
+            screen,
+            player2_name,
+            font,
+            player2_rect.topleft,
+            self.player2.color
+        )
+
+        # -------------------------------------------------
+        # FT5
+        # -------------------------------------------------
+
+        ft5_font = pygame.font.Font(
+            None,
+            18
+        )
+
+        ft5_text = ft5_font.render(
+            "FT5",
+            True,
+            (0, 0, 0)
+        )
+
+        ft5_rect = ft5_text.get_rect(
+            center=(
+                screen.get_width() // 2,
+                14
+            )
+        )
+
+        screen.blit(
+            ft5_text,
+            ft5_rect
+        )
+
+        # -------------------------------------------------
+        # Score
+        # -------------------------------------------------
+
+        score_font = pygame.font.Font(
+            None,
+            44
+        )
+
+        player1_score = getattr(
+            self.match_state.match,
+            "player1_wins",
+            0
+        )
+
+        player2_score = getattr(
+            self.match_state.match,
+            "player2_wins",
+            0
+        )
+
+        score = score_font.render(
+            f"{player1_score} - {player2_score}",
+            True,
+            (0, 0, 0)
+        )
+
+        score_rect = score.get_rect(
+            center=(
+                screen.get_width() // 2,
+                38
+            )
+        )
+
+        screen.blit(
+            score,
+            score_rect
+        )
+
+        # -------------------------------------------------
+        # Upgrade cards
+        # -------------------------------------------------
+
+        player1_hovered = next(
+            (
+                card
+                for card in self.player1_upgrade_cards
+                if card.hovered
+            ),
+            None
+        )
+
+        player2_hovered = next(
+            (
+                card
+                for card in self.player2_upgrade_cards
+                if card.hovered
+            ),
+            None
+        )
+
+        if player1_hovered is not None:
+
+            player1_hovered.draw(
+                screen
+            )
+
+        else:
+
+            for card in self.player1_upgrade_cards:
+
+                card.draw(
+                    screen
+                )
+
+        if player2_hovered is not None:
+
+            player2_hovered.draw(
+                screen
+            )
+
+        else:
+
+            for card in self.player2_upgrade_cards:
+
+                card.draw(
+                    screen
+                )
+
+    # -------------------------------------------------
+    # DRAW
+    # -------------------------------------------------
+
+    def draw(
+        self,
+        screen
+    ):
+        screen.fill(
+            self.get_background_color()
+        )
+
+        self.player1.draw(
+            screen
+        )
+
+        self.player2.draw(
+            screen
+        )
 
         for projectile in self.projectiles:
-            projectile.draw(screen)
 
-    def check_round_end(self):
+            projectile.draw(
+                screen
+            )
+
+        self.draw_upgrade_hud(
+            screen
+        )
+
+    # -------------------------------------------------
+    # ROUND END
+    # -------------------------------------------------
+
+    def check_round_end(
+        self
+    ):
         if not self.player1.is_alive():
+
             self.finish(
                 self.player2,
                 self.player1
             )
 
         elif not self.player2.is_alive():
+
             self.finish(
                 self.player1,
                 self.player2
             )
 
-    def finish(self, winner, loser):
+    def finish(
+        self,
+        winner,
+        loser
+    ):
+        # -------------------------------------------------
+        # Weapon cleanup
+        # -------------------------------------------------
+
+        self.player1.weapon.on_death()
+        self.player2.weapon.on_death()
+
+        # -------------------------------------------------
+        # Leave round
+        # -------------------------------------------------
+
         self.match_state.round_finished(
             winner,
             loser
         )
+
+    # -------------------------------------------------
+    # WEAPON INPUT
+    # -------------------------------------------------
 
     def handle_weapon_input(
         self,
@@ -172,45 +692,73 @@ class RoundState(State):
     ):
         keys = pygame.key.get_pressed()
 
-        if keys[self.player1.attack_key]:
+        # -------------------------------------------------
+        # Player 1
+        # -------------------------------------------------
+
+        if keys[
+            self.player1.attack_key
+        ]:
+
             if isinstance(
                 self.player1.weapon,
                 Unarmed
             ):
+
                 projectiles = (
                     self.player1.weapon.attack(
                         width,
                         height
                     )
                 )
+
             else:
+
                 projectiles = (
                     self.player1.weapon.attack()
                 )
 
-            self.projectiles.extend(
-                projectiles
-            )
+            if projectiles:
 
-        if keys[self.player2.attack_key]:
+                self.projectiles.extend(
+                    projectiles
+                )
+
+        # -------------------------------------------------
+        # Player 2
+        # -------------------------------------------------
+
+        if keys[
+            self.player2.attack_key
+        ]:
+
             if isinstance(
                 self.player2.weapon,
                 Unarmed
             ):
+
                 projectiles = (
                     self.player2.weapon.attack(
                         width,
                         height
                     )
                 )
+
             else:
+
                 projectiles = (
                     self.player2.weapon.attack()
                 )
 
-            self.projectiles.extend(
-                projectiles
-            )
+            if projectiles:
+
+                self.projectiles.extend(
+                    projectiles
+                )
+
+    # -------------------------------------------------
+    # PROJECTILES
+    # -------------------------------------------------
 
     def update_projectiles(
         self,
@@ -225,16 +773,25 @@ class RoundState(State):
             if not projectile.alive:
                 continue
 
-            # Cluster fragments.
+            # -------------------------------------------------
+            # Cluster fragments
+            # -------------------------------------------------
+
             if getattr(
                 projectile,
                 "cluster_child",
                 False
             ):
-                projectile.update(dt)
+
+                projectile.update(
+                    dt
+                )
 
                 if projectile.should_explode:
-                    results = projectile.explode()
+
+                    results = (
+                        projectile.explode()
+                    )
 
                     if results:
                         spawned_projectiles.extend(
@@ -243,13 +800,23 @@ class RoundState(State):
 
                 continue
 
-            projectile.update(dt)
+            # -------------------------------------------------
+            # Normal update
+            # -------------------------------------------------
 
-            # Explosion-spawned entities.
+            projectile.update(
+                dt
+            )
+
+            # -------------------------------------------------
+            # Explosion-spawned entities
+            # -------------------------------------------------
+
             if hasattr(
                 projectile,
                 "get_spawned_entities"
             ):
+
                 results = (
                     projectile.get_spawned_entities()
                 )
@@ -259,13 +826,19 @@ class RoundState(State):
                         results
                     )
 
-            # Mine triggered.
+            # -------------------------------------------------
+            # Delayed explosion
+            # -------------------------------------------------
+
             if getattr(
                 projectile,
                 "should_explode",
                 False
             ):
-                results = projectile.explode()
+
+                results = (
+                    projectile.explode()
+                )
 
                 if results:
                     spawned_projectiles.extend(
@@ -276,11 +849,15 @@ class RoundState(State):
 
                 continue
 
-            # Boundary behavior.
+            # -------------------------------------------------
+            # Boundary behavior
+            # -------------------------------------------------
+
             if hasattr(
                 projectile,
                 "handle_boundary_collision"
             ):
+
                 projectile.handle_boundary_collision(
                     width,
                     height
@@ -290,15 +867,18 @@ class RoundState(State):
                 projectile,
                 "is_out_of_bounds"
             ):
+
                 if projectile.is_out_of_bounds(
                     width,
                     height
                 ):
+
                     if getattr(
                         projectile,
                         "is_mine",
                         False
                     ):
+
                         projectile.stick_to_border(
                             width,
                             height
@@ -308,7 +888,10 @@ class RoundState(State):
                         projectile,
                         "explode"
                     ):
-                        results = projectile.explode()
+
+                        results = (
+                            projectile.explode()
+                        )
 
                         if results:
                             spawned_projectiles.extend(
@@ -316,81 +899,114 @@ class RoundState(State):
                             )
 
                     else:
+
                         projectile.alive = False
 
         self.projectiles.extend(
             spawned_projectiles
         )
 
-    def remove_dead_projectiles(self):
+    def remove_dead_projectiles(
+        self
+    ):
         self.projectiles = [
             projectile
             for projectile in self.projectiles
             if projectile.alive
         ]
 
-    def handle_weapon_collisions(self):
-        # Player 1 -> Player 2.
+    # -------------------------------------------------
+    # WEAPON COLLISIONS
+    # -------------------------------------------------
+
+    def handle_weapon_collisions(
+        self
+    ):
+        # -------------------------------------------------
+        # Player 1
+        # -------------------------------------------------
+
         if isinstance(
             self.player1.weapon,
             Unarmed
         ):
+
             weapon = self.player1.weapon
 
             if check_circle_collision(
                 self.player1,
                 self.player2
             ):
+
                 if weapon.can_hit(
                     self.player2
                 ):
+
                     weapon.hit(
                         self.player2
                     )
 
         elif self.player1.weapon.melee:
+
             weapon = self.player1.weapon
 
             if check_sword_player_collision(
                 weapon,
                 self.player2
             ):
+
                 if weapon.can_hit():
+
                     weapon.hit(
                         self.player2
                     )
 
-        # Player 2 -> Player 1.
+        # -------------------------------------------------
+        # Player 2
+        # -------------------------------------------------
+
         if isinstance(
             self.player2.weapon,
             Unarmed
         ):
+
             weapon = self.player2.weapon
 
             if check_circle_collision(
                 self.player1,
                 self.player2
             ):
+
                 if weapon.can_hit(
                     self.player1
                 ):
+
                     weapon.hit(
                         self.player1
                     )
 
         elif self.player2.weapon.melee:
+
             weapon = self.player2.weapon
 
             if check_sword_player_collision(
                 weapon,
                 self.player1
             ):
+
                 if weapon.can_hit():
+
                     weapon.hit(
                         self.player1
                     )
 
-    def handle_projectile_collisions(self):
+    # -------------------------------------------------
+    # PROJECTILE COLLISIONS
+    # -------------------------------------------------
+
+    def handle_projectile_collisions(
+        self
+    ):
         spawned_projectiles = []
 
         for projectile in self.projectiles:
@@ -398,7 +1014,10 @@ class RoundState(State):
             if not projectile.alive:
                 continue
 
-            # Pincushion arrows.
+            # -------------------------------------------------
+            # Pincushion arrows
+            # -------------------------------------------------
+
             if getattr(
                 projectile,
                 "stuck_to",
@@ -406,7 +1025,10 @@ class RoundState(State):
             ) is not None:
                 continue
 
-            # Cluster fragments.
+            # -------------------------------------------------
+            # Cluster fragments
+            # -------------------------------------------------
+
             if getattr(
                 projectile,
                 "cluster_child",
@@ -414,16 +1036,21 @@ class RoundState(State):
             ):
                 continue
 
-            # Fire patches.
+            # -------------------------------------------------
+            # Fire patches
+            # -------------------------------------------------
+
             if getattr(
                 projectile,
                 "is_fire_patch",
                 False
             ):
+
                 if check_projectile_player_collision(
                     projectile,
                     self.player1
                 ):
+
                     results = projectile.hit(
                         self.player1
                     )
@@ -437,6 +1064,7 @@ class RoundState(State):
                     projectile,
                     self.player2
                 ):
+
                     results = projectile.hit(
                         self.player2
                     )
@@ -448,12 +1076,16 @@ class RoundState(State):
 
                 continue
 
-            # Beam collision.
+            # -------------------------------------------------
+            # Beam
+            # -------------------------------------------------
+
             if getattr(
                 projectile,
                 "is_beam",
                 False
             ):
+
                 opponent = (
                     projectile.weapon.player.opponent
                 )
@@ -462,13 +1094,17 @@ class RoundState(State):
                     projectile,
                     opponent
                 ):
+
                     projectile.hit(
                         opponent
                     )
 
                 continue
 
-            # Earthlight Ray first-frame protection.
+            # -------------------------------------------------
+            # First-frame protection
+            # -------------------------------------------------
+
             if getattr(
                 projectile,
                 "ignore_collision",
@@ -476,11 +1112,15 @@ class RoundState(State):
             ):
                 continue
 
-            # Normal projectile -> Player 1.
+            # -------------------------------------------------
+            # Projectile -> Player 1
+            # -------------------------------------------------
+
             if check_projectile_player_collision(
                 projectile,
                 self.player1
             ):
+
                 results = projectile.hit(
                     self.player1
                 )
@@ -490,11 +1130,15 @@ class RoundState(State):
                         results
                     )
 
-            # Normal projectile -> Player 2.
+            # -------------------------------------------------
+            # Projectile -> Player 2
+            # -------------------------------------------------
+
             elif check_projectile_player_collision(
                 projectile,
                 self.player2
             ):
+
                 results = projectile.hit(
                     self.player2
                 )

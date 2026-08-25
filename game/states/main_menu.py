@@ -1,69 +1,104 @@
-# game/states/main_menu.py
-
 import pygame
 
 from game.states.state import State
+from ui.button import Button
 
 
 class MainMenuState(State):
+
     OPTIONS = [
         "Netplay",
         "Local Multiplayer",
-        "Sandbox",
+        "Game Cards",
         "Settings",
     ]
 
-    def __init__(self, game):
-        super().__init__(game)
+    def __init__(
+        self,
+        game
+    ):
+        super().__init__(
+            game
+        )
 
-        self.selected = 0
+        self.title_font = pygame.font.Font(
+            None,
+            80
+        )
 
-        self.title_font = pygame.font.Font(None, 80)
-        self.option_font = pygame.font.Font(None, 50)
+        self.buttons = []
 
-    def handle_events(self, events):
+        start_y = 250
+
+        for i, option in enumerate(
+            self.OPTIONS
+        ):
+            self.buttons.append(
+                Button(
+                    option,
+                    (
+                        210,
+                        start_y + i * 75,
+                        300,
+                        55
+                    ),
+                    font_size=32,
+                    audio=self.game.audio
+                )
+            )
+
+    def handle_events(
+        self,
+        events
+    ):
         for event in events:
-            if event.type == pygame.KEYDOWN:
 
-                if event.key == pygame.K_UP:
-                    self.selected = (
-                        self.selected - 1
-                    ) % len(self.OPTIONS)
+            if event.type == pygame.QUIT:
+                self.game.running = False
 
-                elif event.key == pygame.K_DOWN:
-                    self.selected = (
-                        self.selected + 1
-                    ) % len(self.OPTIONS)
+            for i, button in enumerate(
+                self.buttons
+            ):
+                if button.clicked(event):
+                    self.select_option(i)
 
-                elif event.key == pygame.K_RETURN:
-                    self.select_option()
+    def select_option(
+        self,
+        index
+    ):
+        option = self.OPTIONS[index]
 
-                elif event.key == pygame.K_ESCAPE:
-                    self.game.running = False
+        if option == "Netplay":
+            self.game.start_host_list()
 
-    def select_option(self):
-        option = self.OPTIONS[self.selected]
+        elif option == "Local Multiplayer":
+            self.game.start_weapon_select()
 
-        if option == "Local Multiplayer":
-            if option == "Local Multiplayer":
-                self.game.start_weapon_select()
-
-        elif option == "Netplay":
-            print("Netplay not implemented yet")
-
-        elif option == "Sandbox":
-            print("Sandbox not implemented yet")
+        elif option == "Game Cards":
+            self.game.start_card_gallery()
 
         elif option == "Settings":
-            print("Settings not implemented yet")
+            self.game.start_settings()
 
-    def update(self, dt):
-        pass
+    def update(
+        self,
+        dt
+    ):
+        mouse_position = pygame.mouse.get_pos()
 
-    def draw(self, screen):
-        screen.fill("white")
+        for button in self.buttons:
+            button.update(
+                mouse_position
+            )
 
-        # Title
+    def draw(
+        self,
+        screen
+    ):
+        screen.fill(
+            "white"
+        )
+
         title = self.title_font.render(
             "ROUNDCLACKS",
             True,
@@ -73,27 +108,13 @@ class MainMenuState(State):
         screen.blit(
             title,
             (
-                screen.get_width() // 2 - title.get_width() // 2,
+                screen.get_width() // 2
+                - title.get_width() // 2,
                 100
             )
         )
 
-        # Menu options
-        for i, option in enumerate(self.OPTIONS):
-            selected = i == self.selected
-
-            color = "red" if selected else "black"
-
-            text = self.option_font.render(
-                option,
-                True,
-                color
-            )
-
-            screen.blit(
-                text,
-                (
-                    screen.get_width() // 2 - text.get_width() // 2,
-                    250 + i * 70
-                )
+        for button in self.buttons:
+            button.draw(
+                screen
             )

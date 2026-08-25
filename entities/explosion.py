@@ -10,12 +10,14 @@ SPRITE_FOLDER = (
     Path(__file__).resolve().parent.parent
     / "assets"
     / "sprites"
+    / "game"
 )
 
 SOUND_FOLDER = (
     Path(__file__).resolve().parent.parent
     / "assets"
-    / "sounds"
+    / "audio"
+    / "game"
 )
 
 
@@ -89,8 +91,10 @@ class Explosion:
         # Sound
         # -------------------------------------------------
 
-        self.explosion_sound = pygame.mixer.Sound(
-            SOUND_FOLDER / "bomb_explosion.mp3"
+        self.explosion_sound = (
+            self.owner.game.audio.load_game_sound(
+                SOUND_FOLDER / "bomb_explosion.mp3"
+            )
         )
 
         # -------------------------------------------------

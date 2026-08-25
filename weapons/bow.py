@@ -13,12 +13,14 @@ SPRITE_FOLDER = (
     Path(__file__).resolve().parent.parent
     / "assets"
     / "sprites"
+    / "game"
 )
 
 SOUND_FOLDER = (
     Path(__file__).resolve().parent.parent
     / "assets"
-    / "sounds"
+    / "audio"
+    / "game"
 )
 
 
@@ -48,7 +50,7 @@ class Bow(Weapon):
         # Sound
         # -------------------------------------------------
 
-        self.shoot_sound = pygame.mixer.Sound(
+        self.shoot_sound = self.player.game.audio.load_game_sound(
             SOUND_FOLDER / "bow_shoot.mp3"
         )
 

@@ -11,12 +11,14 @@ SPRITE_FOLDER = (
     Path(__file__).resolve().parent.parent
     / "assets"
     / "sprites"
+    / "game"
 )
 
 SOUND_FOLDER = (
     Path(__file__).resolve().parent.parent
     / "assets"
-    / "sounds"
+    / "audio"
+    / "game"
 )
 
 
@@ -34,19 +36,34 @@ class Grimoire(Weapon):
             80
         )
 
+        # -------------------------------------------------
+        # Sprites
+        # -------------------------------------------------
+
         self.attack_sprite = pygame.image.load(
             SPRITE_FOLDER / "grimoire_attack.png"
         ).convert_alpha()
 
-        self.beam_sound = pygame.mixer.Sound(
-            SOUND_FOLDER / "grimoire_beam.mp3"
+        # -------------------------------------------------
+        # Sound
+        # -------------------------------------------------
+
+        self.beam_sound = (
+            self.player.game.audio.load_game_sound(
+                SOUND_FOLDER / "grimoire_beam.mp3"
+            )
         )
 
         self.beam_sound_channel = None
 
+        # -------------------------------------------------
+        # State
+        # -------------------------------------------------
+
         self.upgrade_pool = GRIMOIRE_UPGRADES
 
         self.attack_slow_timer = 0
+
         self.tribeam_self_damage_timer = 0
 
     # -------------------------------------------------
@@ -56,11 +73,19 @@ class Grimoire(Weapon):
     def update(self, dt):
         was_attacking = self.is_attacking()
 
+        # -------------------------------------------------
+        # Cooldown
+        # -------------------------------------------------
+
         if self.cooldown_timer > 0:
             self.cooldown_timer -= dt
 
             if self.cooldown_timer < 0:
                 self.cooldown_timer = 0
+
+        # -------------------------------------------------
+        # Beam timer
+        # -------------------------------------------------
 
         if self.attack_slow_timer > 0:
             self.attack_slow_timer -= dt
@@ -68,11 +93,20 @@ class Grimoire(Weapon):
             if self.attack_slow_timer < 0:
                 self.attack_slow_timer = 0
 
+        # -------------------------------------------------
+        # Beam ended
+        # -------------------------------------------------
+
         if (
             was_attacking
             and not self.is_attacking()
         ):
             self.stop_beam_sound()
+            self.start_cooldown()
+
+        # -------------------------------------------------
+        # Tribeam self-damage timer
+        # -------------------------------------------------
 
         if self.tribeam_self_damage_timer > 0:
             self.tribeam_self_damage_timer -= dt
@@ -96,6 +130,10 @@ class Grimoire(Weapon):
             self.tribeam_self_damage_timer = (
                 self.get_tick_interval()
             )
+
+        # -------------------------------------------------
+        # Orbit
+        # -------------------------------------------------
 
         self.angle += (
             self.get_rotation_speed()
@@ -151,6 +189,9 @@ class Grimoire(Weapon):
             self.beam_sound_channel.stop()
             self.beam_sound_channel = None
 
+    def on_death(self):
+        self.stop_beam_sound()
+
     # -------------------------------------------------
     # SPRITE
     # -------------------------------------------------
@@ -198,8 +239,6 @@ class Grimoire(Weapon):
     def attack(self):
         if not self.can_attack():
             return []
-
-        self.start_cooldown()
 
         self.attack_slow_timer = (
             self.get_beam_duration()
@@ -253,12 +292,16 @@ class Grimoire(Weapon):
         return multiplier
 
     def modify_incoming_damage(self, damage):
-        damage = super().modify_incoming_damage(
-            damage
+        damage = (
+            super().modify_incoming_damage(
+                damage
+            )
         )
 
         if self.is_attacking():
+
             for upgrade in self.upgrades:
+
                 if upgrade.name == "Magic Barrier":
                     damage *= (
                         0.1 ** upgrade.stacks
@@ -270,6 +313,7 @@ class Grimoire(Weapon):
         cooldown = self.base_cooldown
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "Fast Reader":
                 cooldown *= (
                     0.5 ** upgrade.stacks
@@ -280,10 +324,7 @@ class Grimoire(Weapon):
                     3 ** upgrade.stacks
                 )
 
-        return (
-            self.get_beam_duration()
-            + cooldown
-        )
+        return cooldown
 
     # -------------------------------------------------
     # BEAM
@@ -293,6 +334,7 @@ class Grimoire(Weapon):
         count = 1
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "Double Spark":
                 count += upgrade.stacks
 
@@ -305,6 +347,7 @@ class Grimoire(Weapon):
             speed *= 0.5
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "Water Enchantment":
                 speed *= (
                     0.75 ** upgrade.stacks
@@ -316,6 +359,7 @@ class Grimoire(Weapon):
         damage = self.base_damage
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "Earth Enchantment":
                 damage += upgrade.stacks
 
@@ -330,6 +374,7 @@ class Grimoire(Weapon):
         duration = 1.0
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "Mana Reserves":
                 duration *= (
                     1.5 ** upgrade.stacks
@@ -351,6 +396,7 @@ class Grimoire(Weapon):
         interval = 0.02
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "Hotter Beam":
                 interval *= (
                     0.5 ** upgrade.stacks
@@ -358,7 +404,8 @@ class Grimoire(Weapon):
 
             elif upgrade.name == "Fire Enchantment":
                 interval *= (
-                    (1 / 3) ** upgrade.stacks
+                    (1 / 3)
+                    ** upgrade.stacks
                 )
 
             elif upgrade.name == "Earth Enchantment":
@@ -368,7 +415,8 @@ class Grimoire(Weapon):
 
             elif upgrade.name == "Master Spark":
                 interval *= (
-                    (1 / 3) ** upgrade.stacks
+                    (1 / 3)
+                    ** upgrade.stacks
                 )
 
         return interval
@@ -377,6 +425,7 @@ class Grimoire(Weapon):
         width = 80
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "Spell Proficiency":
                 width *= (
                     1.5 ** upgrade.stacks
@@ -398,6 +447,7 @@ class Grimoire(Weapon):
         force = 0
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "Faster Current":
                 force += (
                     250
@@ -410,6 +460,7 @@ class Grimoire(Weapon):
         lifesteal = 0
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "Wood Enchantment":
                 lifesteal += (
                     0.5
@@ -422,6 +473,7 @@ class Grimoire(Weapon):
         damage = 0
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "Tribeam":
                 damage += upgrade.stacks
 

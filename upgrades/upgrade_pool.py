@@ -129,7 +129,7 @@ SWORD_UPGRADES = [
     Upgrade(
         "Beyblade",
         "super rare",
-        "Dealing damage refreshes spin cooldown, temporary +25% spin speed for 5 seconds each hit"
+        "0 spin cooldown, temporary +25% spin speed for 5 seconds each hit"
     ),
 
     Upgrade(
@@ -159,7 +159,7 @@ BOW_UPGRADES = [
     Upgrade(
         "Pointiness",
         "common",
-        "+25 damage"
+        "+25% damage"
     ),
 
     Upgrade(
@@ -256,7 +256,7 @@ BOMB_UPGRADES = [
     ),
 
     Upgrade(
-        "Gunpower",
+        "Gunpowder",
         "common",
         "+50% blast radius"
     ),
@@ -490,7 +490,7 @@ UNARMED_UPGRADES = [
     Upgrade(
         "Brute",
         "rare",
-        "+25% size, +50% health, -25% speed"
+        "+25% size, +50% health"
     ),
 
     Upgrade(
@@ -522,7 +522,7 @@ UNARMED_UPGRADES = [
     Upgrade(
         "Raging Demon",
         "super rare",
-        "+100% attack cooldown, +700% speed during attack, +300% attack duration"
+        "+100% speed, +100% attack duration, +50% cooldown, landing a hit recharges charge duration"
     ),
 
     Upgrade(

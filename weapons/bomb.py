@@ -12,12 +12,14 @@ SPRITE_FOLDER = (
     Path(__file__).resolve().parent.parent
     / "assets"
     / "sprites"
+    / "game"
 )
 
 SOUND_FOLDER = (
     Path(__file__).resolve().parent.parent
     / "assets"
-    / "sounds"
+    / "audio"
+    / "game"
 )
 
 
@@ -39,7 +41,7 @@ class Bomb(Weapon):
             SPRITE_FOLDER / "bomb_missing.png"
         ).convert_alpha()
 
-        self.throw_sound = pygame.mixer.Sound(
+        self.throw_sound = self.player.game.audio.load_game_sound(
             SOUND_FOLDER / "bomb_throw.mp3"
         )
 
@@ -193,7 +195,7 @@ class Bomb(Weapon):
         radius = 75
 
         for upgrade in self.upgrades:
-            if upgrade.name == "Gunpower":
+            if upgrade.name == "Gunpowder":
                 radius *= 1.5 ** upgrade.stacks
 
             elif upgrade.name == "Fuse":

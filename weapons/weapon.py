@@ -10,6 +10,7 @@ SPRITE_FOLDER = (
     Path(__file__).resolve().parent.parent
     / "assets"
     / "sprites"
+    / "game"
 )
 
 
@@ -214,6 +215,9 @@ class Weapon:
     def attack(self):
         raise NotImplementedError
 
+    def is_attacking(self):
+        return False
+
     def get_damage(self):
         return self.base_damage
 
@@ -221,12 +225,18 @@ class Weapon:
         return self.base_cooldown
 
     def can_attack(self):
-        return self.cooldown_timer <= 0
+        return (
+            self.cooldown_timer <= 0
+            and not self.is_attacking()
+        )
 
     def start_cooldown(self):
         self.cooldown_timer = (
             self.get_attack_cooldown()
         )
+
+    def reset_cooldown(self):
+        self.cooldown_timer = 0
 
     # -------------------------------------------------
     # PLAYER STATS
@@ -319,9 +329,6 @@ class Weapon:
 
         bounced = False
 
-        # Slight deterministic deflection prevents
-        # perfectly horizontal/vertical trajectories
-        # from becoming permanently axis-locked.
         bounce_angle = 10
 
         # -------------------------------------------------
@@ -431,6 +438,12 @@ class Weapon:
     def handle_collision(self, opponent):
         pass
 
+    def has_upgrade(self, name):
+        return any(
+            upgrade.name == name
+            for upgrade in self.upgrades
+        )
+
     def add_upgrade(self, upgrade):
         for existing_upgrade in self.upgrades:
             if existing_upgrade.name == upgrade.name:
@@ -458,4 +471,10 @@ class Weapon:
         )
 
     def on_death(self):
-        return []
+        """
+        Called when the round ends.
+
+        Weapons with looping sounds or other
+        persistent effects override this.
+        """
+        pass

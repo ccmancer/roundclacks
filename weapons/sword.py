@@ -10,7 +10,8 @@ from entities.magic_slash import MagicSlash
 SOUND_FOLDER = (
     Path(__file__).resolve().parent.parent
     / "assets"
-    / "sounds"
+    / "audio"
+    / "game"
 )
 
 
@@ -53,8 +54,11 @@ class Sword(Weapon):
 
         self.base_attack_rotation_speed = 20
 
-        # Swing sound.
-        self.swing_sound = pygame.mixer.Sound(
+        # -------------------------------------------------
+        # Sound
+        # -------------------------------------------------
+
+        self.swing_sound = self.player.game.audio.load_game_sound(
             SOUND_FOLDER / "sword_swing.mp3"
         )
 
@@ -65,14 +69,33 @@ class Sword(Weapon):
     # -------------------------------------------------
 
     def update(self, dt):
-        if self.cooldown_timer > 0:
+        # -------------------------------------------------
+        # Cooldown
+        # -------------------------------------------------
+
+        # Beyblade has no cooldown whatsoever.
+        if self.has_beyblade():
+            self.cooldown_timer = 0
+
+        elif self.cooldown_timer > 0:
             self.cooldown_timer -= dt
+
+            if self.cooldown_timer < 0:
+                self.cooldown_timer = 0
+
+        # -------------------------------------------------
+        # Beyblade buffs
+        # -------------------------------------------------
 
         self.beyblade_buffs = [
             timer - dt
             for timer in self.beyblade_buffs
             if timer - dt > 0
         ]
+
+        # -------------------------------------------------
+        # Attack
+        # -------------------------------------------------
 
         if self.attacking:
             rotation_speed = (
@@ -97,6 +120,14 @@ class Sword(Weapon):
             ):
                 self.attacking = False
                 self.attack_angle = 0
+
+                # Beyblade never starts a cooldown.
+                if not self.has_beyblade():
+                    self.start_cooldown()
+
+        # -------------------------------------------------
+        # Normal orbit
+        # -------------------------------------------------
 
         else:
             rotation_speed = (
@@ -168,6 +199,13 @@ class Sword(Weapon):
             )
 
     # -------------------------------------------------
+    # STATE
+    # -------------------------------------------------
+
+    def is_attacking(self):
+        return self.attacking
+
+    # -------------------------------------------------
     # HITBOX
     # -------------------------------------------------
 
@@ -213,6 +251,11 @@ class Sword(Weapon):
                     1.5 ** upgrade.stacks
                 )
 
+            elif upgrade.name == "Juggernaut":
+                length *= (
+                    1.5 ** upgrade.stacks
+                )
+
         return length
 
     def get_sprite_width(self):
@@ -220,6 +263,11 @@ class Sword(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Greatsword":
+                width *= (
+                    1.5 ** upgrade.stacks
+                )
+
+            elif upgrade.name == "Juggernaut":
                 width *= (
                     1.5 ** upgrade.stacks
                 )
@@ -235,7 +283,6 @@ class Sword(Weapon):
             super().get_speed_multiplier()
         )
 
-        # Sword's base movement speed.
         multiplier *= 1.25
 
         return multiplier
@@ -248,24 +295,24 @@ class Sword(Weapon):
         if not self.can_attack():
             return []
 
-        self.start_cooldown()
-
-        # Play sword swing sound.
         self.swing_sound.play()
 
         step_force = self.get_step_force()
 
         if step_force > 0:
-            direction = (
-                self.player.opponent.position
-                - self.player.position
-            )
+            opponent = self.player.opponent
 
-            self.player.apply_force(
-                direction,
-                step_force,
-                0.1
-            )
+            if opponent is not None:
+                direction = (
+                    opponent.position
+                    - self.player.position
+                )
+
+                self.player.apply_force(
+                    direction,
+                    step_force,
+                    0.1
+                )
 
         self.attacking = True
         self.attack_angle = 0
@@ -357,9 +404,23 @@ class Sword(Weapon):
                     0.75 ** upgrade.stacks
                 )
 
+            elif upgrade.name == "Beyblade":
+                beyblade_stacks = len(
+                    self.beyblade_buffs
+                )
+
+                if beyblade_stacks > 0:
+                    speed *= (
+                        1.25 ** beyblade_stacks
+                    )
+
         return speed
 
     def get_attack_cooldown(self):
+        # Beyblade has zero cooldown unconditionally.
+        if self.has_beyblade():
+            return 0
+
         cooldown = self.base_cooldown
 
         for upgrade in self.upgrades:
@@ -444,6 +505,8 @@ class Sword(Weapon):
     def hit(self, player):
         self.hit_angle = 0
 
+        # Beyblade's on-hit effect:
+        # gain a temporary 25% spin-speed buff.
         self.trigger_beyblade()
 
         damage = self.get_damage()
@@ -476,6 +539,12 @@ class Sword(Weapon):
     # -------------------------------------------------
     # UPGRADE EFFECTS
     # -------------------------------------------------
+
+    def has_beyblade(self):
+        return any(
+            upgrade.name == "Beyblade"
+            for upgrade in self.upgrades
+        )
 
     def get_blade_count(self):
         count = 1
@@ -522,21 +591,18 @@ class Sword(Weapon):
         return lifesteal
 
     def trigger_beyblade(self):
-        has_beyblade = False
+        if not self.has_beyblade():
+            return
+
+        # Each Beyblade stack gives one buff per hit.
+        stacks = 0
 
         for upgrade in self.upgrades:
             if upgrade.name == "Beyblade":
-                has_beyblade = True
-                break
+                stacks += upgrade.stacks
 
-        if not has_beyblade:
-            return
-
-        self.cooldown_timer = 0
-
-        self.beyblade_buffs.append(
-            5.0
-        )
+        for _ in range(stacks):
+            self.beyblade_buffs.append(5.0)
 
     def get_hero_stacks(self):
         stacks = 0
@@ -586,3 +652,8 @@ class Sword(Weapon):
         )
 
         self.beyblade_buffs = []
+
+        # Make absolutely sure a Beyblade sword
+        # starts with zero cooldown.
+        if self.has_beyblade():
+            self.cooldown_timer = 0
