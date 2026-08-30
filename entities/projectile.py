@@ -1,13 +1,6 @@
 import pygame
-from pathlib import Path
 
-
-SPRITE_FOLDER = (
-    Path(__file__).resolve().parent.parent
-    / "assets"
-    / "sprites"
-    / "game"
-)
+from game.asset_helper import load_image
 
 
 class Projectile:
@@ -80,11 +73,14 @@ class Projectile:
 
         try:
 
-            self.sprite = pygame.image.load(
-                SPRITE_FOLDER / self.sprite_name
-            ).convert_alpha()
+            self.sprite = load_image(
+                "sprites",
+                "game",
+                self.sprite_name
+            )
 
         except (
+            FileNotFoundError,
             pygame.error,
             OSError
         ) as error:

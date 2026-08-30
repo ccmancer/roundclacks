@@ -1,13 +1,6 @@
 import pygame
-from pathlib import Path
 
-
-SPRITE_FOLDER = (
-    Path(__file__).resolve().parent.parent
-    / "assets"
-    / "sprites"
-    / "game"
-)
+from game.asset_helper import load_image
 
 
 class FirePatch:
@@ -67,9 +60,11 @@ class FirePatch:
         # Sprite
         # -------------------------------------------------
 
-        self.sprite = pygame.image.load(
-            SPRITE_FOLDER / "fire_patch.png"
-        ).convert_alpha()
+        self.sprite = load_image(
+            "sprites",
+            "game",
+            "fire_patch.png"
+        )
 
     # -------------------------------------------------
     # UPDATE

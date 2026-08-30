@@ -1,13 +1,4 @@
 import pygame
-from pathlib import Path
-
-
-SOUND_FOLDER = (
-    Path(__file__).resolve().parent.parent
-    / "assets"
-    / "audio"
-    / "ui"
-)
 
 
 class Button:
@@ -37,7 +28,7 @@ class Button:
         if audio is not None:
             self.select_sound = (
                 audio.load_ui_sound(
-                    SOUND_FOLDER / "select.mp3"
+                    "select.mp3"
                 )
             )
 

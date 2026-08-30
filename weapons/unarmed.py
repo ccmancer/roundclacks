@@ -1,17 +1,8 @@
 import pygame
-from pathlib import Path
 
 from weapons.weapon import Weapon
 from upgrades.upgrade_pool import UNARMED_UPGRADES
 from entities.fire_patch import FirePatch
-
-
-SOUND_FOLDER = (
-    Path(__file__).resolve().parent.parent
-    / "assets"
-    / "audio"
-    / "game"
-)
 
 
 class Unarmed(Weapon):
@@ -37,13 +28,13 @@ class Unarmed(Weapon):
 
         self.dash_sound = (
             self.player.game.audio.load_game_sound(
-                SOUND_FOLDER / "unarmed_dash.mp3"
+                "unarmed_dash.mp3"
             )
         )
 
         self.teleport_sound = (
             self.player.game.audio.load_game_sound(
-                SOUND_FOLDER / "unarmed_teleport.mp3"
+                "unarmed_teleport.mp3"
             )
         )
 

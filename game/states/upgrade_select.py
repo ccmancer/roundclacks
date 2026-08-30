@@ -1,24 +1,9 @@
 import pygame
 import re
-from pathlib import Path
 
+from game.asset_helper import load_image
 from game.states.state import State
 from upgrades.upgrade_pool import generate_upgrade_choices
-
-
-UPGRADE_FOLDER = (
-    Path(__file__).resolve().parent.parent.parent
-    / "assets"
-    / "sprites"
-    / "upgrade"
-)
-
-SOUND_FOLDER = (
-    Path(__file__).resolve().parent.parent.parent
-    / "assets"
-    / "audio"
-    / "ui"
-)
 
 
 class UpgradeSelectState(State):
@@ -149,15 +134,13 @@ class UpgradeSelectState(State):
 
         self.card_present_sound = (
             self.game.audio.load_ui_sound(
-                SOUND_FOLDER
-                / "card_present.mp3"
+                "card_present.mp3"
             )
         )
 
         self.card_select_sound = (
             self.game.audio.load_ui_sound(
-                SOUND_FOLDER
-                / "card_select.mp3"
+                "card_select.mp3"
             )
         )
 
@@ -181,10 +164,10 @@ class UpgradeSelectState(State):
                 + "_card.png"
             )
 
-            self.card_sprites[rarity] = (
-                pygame.image.load(
-                    UPGRADE_FOLDER / filename
-                ).convert_alpha()
+            self.card_sprites[rarity] = load_image(
+                "sprites",
+                "upgrade",
+                filename
             )
 
         # -------------------------------------------------
@@ -261,14 +244,19 @@ class UpgradeSelectState(State):
     ):
         try:
 
-            return pygame.image.load(
-                UPGRADE_FOLDER
-                / self.get_upgrade_filename(
+            return load_image(
+                "sprites",
+                "upgrade",
+                self.get_upgrade_filename(
                     name
                 )
-            ).convert_alpha()
+            )
 
-        except pygame.error:
+        except (
+            FileNotFoundError,
+            pygame.error,
+            OSError
+        ):
 
             return None
 

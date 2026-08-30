@@ -1,26 +1,13 @@
+
 import pygame
 import math
-from pathlib import Path
+
+from game.asset_helper import load_image
 
 from weapons.weapon import Weapon
 from entities.arrow import Arrow
 from upgrades.upgrade_pool import BOW_UPGRADES
 from entities.bear_trap import BearTrap
-
-
-SPRITE_FOLDER = (
-    Path(__file__).resolve().parent.parent
-    / "assets"
-    / "sprites"
-    / "game"
-)
-
-SOUND_FOLDER = (
-    Path(__file__).resolve().parent.parent
-    / "assets"
-    / "audio"
-    / "game"
-)
 
 
 class Bow(Weapon):
@@ -41,16 +28,18 @@ class Bow(Weapon):
         # Sprites
         # -------------------------------------------------
 
-        self.primed_sprite = pygame.image.load(
-            SPRITE_FOLDER / "bow_primed.png"
-        ).convert_alpha()
+        self.primed_sprite = load_image(
+            "sprites",
+            "game",
+            "bow_primed.png"
+        )
 
         # -------------------------------------------------
         # Sound
         # -------------------------------------------------
 
         self.shoot_sound = self.player.game.audio.load_game_sound(
-            SOUND_FOLDER / "bow_shoot.mp3"
+            "bow_shoot.mp3"
         )
 
         # -------------------------------------------------

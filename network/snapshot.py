@@ -1,22 +1,8 @@
 from copy import deepcopy
-from pathlib import Path
 
 import pygame
 
-
-SPRITE_FOLDER = (
-    Path(__file__).resolve().parent.parent
-    / "assets"
-    / "sprites"
-    / "game"
-)
-
-SOUND_FOLDER = (
-    Path(__file__).resolve().parent.parent
-    / "assets"
-    / "audio"
-    / "game"
-)
+from game.asset_helper import load_image
 
 
 class GameSnapshot:
@@ -720,14 +706,14 @@ class GameSnapshot:
 
                 try:
 
-                    entity.sprite = (
-                        pygame.image.load(
-                            SPRITE_FOLDER
-                            / sprite_name
-                        ).convert_alpha()
+                    entity.sprite = load_image(
+                        "sprites",
+                        "game",
+                        sprite_name
                     )
 
                 except (
+                    FileNotFoundError,
                     pygame.error,
                     OSError
                 ):
@@ -742,14 +728,14 @@ class GameSnapshot:
 
             try:
 
-                entity.explosion_sprite = (
-                    pygame.image.load(
-                        SPRITE_FOLDER
-                        / "explosion.png"
-                    ).convert_alpha()
+                entity.explosion_sprite = load_image(
+                    "sprites",
+                    "game",
+                    "explosion.png"
                 )
 
             except (
+                FileNotFoundError,
                 pygame.error,
                 OSError
             ):
@@ -758,14 +744,14 @@ class GameSnapshot:
 
             try:
 
-                entity.warning_sprite = (
-                    pygame.image.load(
-                        SPRITE_FOLDER
-                        / "warning.png"
-                    ).convert_alpha()
+                entity.warning_sprite = load_image(
+                    "sprites",
+                    "game",
+                    "warning.png"
                 )
 
             except (
+                FileNotFoundError,
                 pygame.error,
                 OSError
             ):
@@ -784,8 +770,7 @@ class GameSnapshot:
 
                     entity.explosion_sound = (
                         owner.game.audio.load_game_sound(
-                            SOUND_FOLDER
-                            / "bomb_explosion.mp3"
+                            "bomb_explosion.mp3"
                         )
                     )
 
@@ -801,14 +786,14 @@ class GameSnapshot:
 
             try:
 
-                entity.sprite = (
-                    pygame.image.load(
-                        SPRITE_FOLDER
-                        / "chaos_blade.png"
-                    ).convert_alpha()
+                entity.sprite = load_image(
+                    "sprites",
+                    "game",
+                    "chaos_blade.png"
                 )
 
             except (
+                FileNotFoundError,
                 pygame.error,
                 OSError
             ):
@@ -823,14 +808,14 @@ class GameSnapshot:
 
             try:
 
-                entity.sprite = (
-                    pygame.image.load(
-                        SPRITE_FOLDER
-                        / "nuke_pool.png"
-                    ).convert_alpha()
+                entity.sprite = load_image(
+                    "sprites",
+                    "game",
+                    "nuke_pool.png"
                 )
 
             except (
+                FileNotFoundError,
                 pygame.error,
                 OSError
             ):
@@ -845,14 +830,14 @@ class GameSnapshot:
 
             try:
 
-                entity.sprite = (
-                    pygame.image.load(
-                        SPRITE_FOLDER
-                        / "fire_patch.png"
-                    ).convert_alpha()
+                entity.sprite = load_image(
+                    "sprites",
+                    "game",
+                    "fire_patch.png"
                 )
 
             except (
+                FileNotFoundError,
                 pygame.error,
                 OSError
             ):

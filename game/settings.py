@@ -1,12 +1,37 @@
 import json
+import os
 from pathlib import Path
 
 
-SETTINGS_FILE = (
-    Path(__file__).resolve().parent.parent
-    / "save"
-    / "settings.json"
-)
+def get_settings_file():
+    # -------------------------------------------------
+    # Windows
+    # -------------------------------------------------
+
+    appdata = os.getenv(
+        "APPDATA"
+    )
+
+    if appdata:
+
+        return (
+            Path(appdata)
+            / "Roundclacks"
+            / "settings.json"
+        )
+
+    # -------------------------------------------------
+    # Fallback
+    # -------------------------------------------------
+
+    return (
+        Path.home()
+        / ".roundclacks"
+        / "settings.json"
+    )
+
+
+SETTINGS_FILE = get_settings_file()
 
 
 class GameSettings:

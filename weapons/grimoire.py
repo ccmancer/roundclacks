@@ -1,25 +1,11 @@
 import pygame
 import math
-from pathlib import Path
+
+from game.asset_helper import load_image
 
 from weapons.weapon import Weapon
 from entities.beam import Beam
 from upgrades.upgrade_pool import GRIMOIRE_UPGRADES
-
-
-SPRITE_FOLDER = (
-    Path(__file__).resolve().parent.parent
-    / "assets"
-    / "sprites"
-    / "game"
-)
-
-SOUND_FOLDER = (
-    Path(__file__).resolve().parent.parent
-    / "assets"
-    / "audio"
-    / "game"
-)
 
 
 class Grimoire(Weapon):
@@ -40,9 +26,11 @@ class Grimoire(Weapon):
         # Sprites
         # -------------------------------------------------
 
-        self.attack_sprite = pygame.image.load(
-            SPRITE_FOLDER / "grimoire_attack.png"
-        ).convert_alpha()
+        self.attack_sprite = load_image(
+            "sprites",
+            "game",
+            "grimoire_attack.png"
+        )
 
         # -------------------------------------------------
         # Sound
@@ -50,7 +38,7 @@ class Grimoire(Weapon):
 
         self.beam_sound = (
             self.player.game.audio.load_game_sound(
-                SOUND_FOLDER / "grimoire_beam.mp3"
+                "grimoire_beam.mp3"
             )
         )
 

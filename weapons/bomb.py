@@ -1,25 +1,10 @@
 import pygame
 
-from pathlib import Path
+from game.asset_helper import load_image
 
 from weapons.weapon import Weapon
 from entities.bomb_projectile import BombProjectile
 from upgrades.upgrade_pool import BOMB_UPGRADES
-
-
-SPRITE_FOLDER = (
-    Path(__file__).resolve().parent.parent
-    / "assets"
-    / "sprites"
-    / "game"
-)
-
-SOUND_FOLDER = (
-    Path(__file__).resolve().parent.parent
-    / "assets"
-    / "audio"
-    / "game"
-)
 
 
 class Bomb(Weapon):
@@ -36,12 +21,14 @@ class Bomb(Weapon):
             60
         )
 
-        self.missing_sprite = pygame.image.load(
-            SPRITE_FOLDER / "bomb_missing.png"
-        ).convert_alpha()
+        self.missing_sprite = load_image(
+            "sprites",
+            "game",
+            "bomb_missing.png"
+        )
 
         self.throw_sound = self.player.game.audio.load_game_sound(
-            SOUND_FOLDER / "bomb_throw.mp3"
+            "bomb_throw.mp3"
         )
 
         self.upgrade_pool = BOMB_UPGRADES

@@ -1,24 +1,10 @@
 import pygame
-from pathlib import Path
+
+from game.asset_helper import load_image
 
 from entities.nuke_pool import NukePool
 from entities.earthlight_ray import EarthlightRay
 from entities.chaos_blade import ChaosBlade
-
-
-SPRITE_FOLDER = (
-    Path(__file__).resolve().parent.parent
-    / "assets"
-    / "sprites"
-    / "game"
-)
-
-SOUND_FOLDER = (
-    Path(__file__).resolve().parent.parent
-    / "assets"
-    / "audio"
-    / "game"
-)
 
 
 class Explosion:
@@ -93,7 +79,7 @@ class Explosion:
 
         self.explosion_sound = (
             self.owner.game.audio.load_game_sound(
-                SOUND_FOLDER / "bomb_explosion.mp3"
+                "bomb_explosion.mp3"
             )
         )
 
@@ -101,13 +87,17 @@ class Explosion:
         # Sprites
         # -------------------------------------------------
 
-        self.explosion_sprite = pygame.image.load(
-            SPRITE_FOLDER / "explosion.png"
-        ).convert_alpha()
+        self.explosion_sprite = load_image(
+            "sprites",
+            "game",
+            "explosion.png"
+        )
 
-        self.warning_sprite = pygame.image.load(
-            SPRITE_FOLDER / "warning.png"
-        ).convert_alpha()
+        self.warning_sprite = load_image(
+            "sprites",
+            "game",
+            "warning.png"
+        )
 
     # -------------------------------------------------
     # UPDATE

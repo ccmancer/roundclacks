@@ -33,7 +33,7 @@ class NetplayLobbyState(State):
         self.awaiting_join = awaiting_join
 
         self.game.audio.play_music(
-            "hostlist"
+            "netplay"
         )
 
         # -------------------------------------------------

@@ -1,25 +1,12 @@
 import pygame
 import random
-from pathlib import Path
+
+from game.asset_helper import load_image
 
 
 HEALTH_FONT = pygame.font.Font(
     None,
     24
-)
-
-SPRITE_FOLDER = (
-    Path(__file__).resolve().parent.parent
-    / "assets"
-    / "sprites"
-    / "game"
-)
-
-SOUND_FOLDER = (
-    Path(__file__).resolve().parent.parent
-    / "assets"
-    / "audio"
-    / "game"
 )
 
 
@@ -69,13 +56,15 @@ class Player:
         # Sprite / Sound
         # -------------------------------------------------
 
-        self.sprite = pygame.image.load(
-            SPRITE_FOLDER / "player.png"
-        ).convert_alpha()
+        self.sprite = load_image(
+            "sprites",
+            "game",
+            "player.png"
+        )
 
         self.hurt_sound = (
             self.game.audio.load_game_sound(
-                SOUND_FOLDER / "hurt.mp3"
+                "hurt.mp3"
             )
         )
 
@@ -472,6 +461,7 @@ class Player:
         self
     ):
         if self.max_health <= 0:
+
             return 0
 
         return max(

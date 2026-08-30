@@ -1,17 +1,10 @@
 import pygame
 import math
 import random
-from pathlib import Path
+
+from game.asset_helper import load_image
 
 from upgrades.upgrade import Upgrade
-
-
-SPRITE_FOLDER = (
-    Path(__file__).resolve().parent.parent
-    / "assets"
-    / "sprites"
-    / "game"
-)
 
 
 class Weapon:
@@ -61,9 +54,11 @@ class Weapon:
 
         if sprite_filename is not None:
 
-            self.sprite = pygame.image.load(
-                SPRITE_FOLDER / sprite_filename
-            ).convert_alpha()
+            self.sprite = load_image(
+                "sprites",
+                "game",
+                sprite_filename
+            )
 
     # -------------------------------------------------
     # UPDATE / DRAW

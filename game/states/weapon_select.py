@@ -1,5 +1,4 @@
 import pygame
-from pathlib import Path
 
 from game.states.state import State
 
@@ -11,14 +10,6 @@ from weapons.unarmed import Unarmed
 
 from ui.button import Button
 from ui.weapon_icon import WeaponIcon
-
-
-SOUND_FOLDER = (
-    Path(__file__).resolve().parent.parent.parent
-    / "assets"
-    / "audio"
-    / "ui"
-)
 
 
 class WeaponSelectState(State):
@@ -77,8 +68,7 @@ class WeaponSelectState(State):
 
         self.character_select_sound = (
             self.game.audio.load_ui_sound(
-                SOUND_FOLDER
-                / "character_select.mp3"
+                "character_select.mp3"
             )
         )
 

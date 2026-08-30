@@ -1,13 +1,6 @@
 import pygame
-from pathlib import Path
 
-
-SPRITE_FOLDER = (
-    Path(__file__).resolve().parent.parent
-    / "assets"
-    / "sprites"
-    / "game"
-)
+from game.asset_helper import load_image
 
 
 class NukePool:
@@ -39,9 +32,11 @@ class NukePool:
         self.alive = True
         self.can_hit_owner = True
 
-        self.sprite = pygame.image.load(
-            SPRITE_FOLDER / "nuke_pool.png"
-        ).convert_alpha()
+        self.sprite = load_image(
+            "sprites",
+            "game",
+            "nuke_pool.png"
+        )
 
     # -------------------------------------------------
     # UPDATE

@@ -1,14 +1,7 @@
 import pygame
 import re
-from pathlib import Path
 
-
-UPGRADE_FOLDER = (
-    Path(__file__).resolve().parent.parent
-    / "assets"
-    / "sprites"
-    / "upgrade"
-)
+from game.asset_helper import load_image
 
 
 class UpgradeCard:
@@ -129,27 +122,28 @@ class UpgradeCard:
             + "_card.png"
         )
 
-        path = (
-            UPGRADE_FOLDER
-            / filename
+        return load_image(
+            "sprites",
+            "upgrade",
+            filename
         )
 
-        return pygame.image.load(
-            path
-        ).convert_alpha()
-
     def load_upgrade_sprite(self):
-        path = (
-            UPGRADE_FOLDER
-            / self.get_upgrade_filename()
+        filename = (
+            self.get_upgrade_filename()
         )
 
         try:
-            return pygame.image.load(
-                path
-            ).convert_alpha()
+            return load_image(
+                "sprites",
+                "upgrade",
+                filename
+            )
 
-        except pygame.error:
+        except (
+            FileNotFoundError,
+            pygame.error
+        ):
             return None
 
     # -------------------------------------------------
@@ -198,7 +192,9 @@ class UpgradeCard:
     # RECT
     # -------------------------------------------------
 
-    def get_mini_rect(self):
+    def get_mini_rect(
+        self
+    ):
         return pygame.Rect(
             int(self.position.x),
             int(self.position.y),

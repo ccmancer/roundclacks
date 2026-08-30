@@ -1,13 +1,6 @@
 import pygame
-from pathlib import Path
 
-
-MUSIC_FOLDER = (
-    Path(__file__).resolve().parent.parent
-    / "assets"
-    / "audio"
-    / "music"
-)
+from game.asset_helper import get_asset_path
 
 
 class ManagedSound:
@@ -37,7 +30,9 @@ class ManagedSound:
             loops
         )
 
-    def stop(self):
+    def stop(
+        self
+    ):
         self.sound.stop()
 
     def set_volume(
@@ -48,7 +43,9 @@ class ManagedSound:
 
         self.update_volume()
 
-    def update_volume(self):
+    def update_volume(
+        self
+    ):
         volume = (
             self.base_volume
             * self.audio_manager.get_volume(
@@ -93,8 +90,14 @@ class AudioManager:
 
     def load_game_sound(
         self,
-        path
+        filename
     ):
+        path = get_asset_path(
+            "audio",
+            "game",
+            filename
+        )
+
         sound = pygame.mixer.Sound(
             path
         )
@@ -107,8 +110,14 @@ class AudioManager:
 
     def load_ui_sound(
         self,
-        path
+        filename
     ):
+        path = get_asset_path(
+            "audio",
+            "ui",
+            filename
+        )
+
         sound = pygame.mixer.Sound(
             path
         )
@@ -160,9 +169,10 @@ class AudioManager:
         ):
             return
 
-        path = (
-            MUSIC_FOLDER
-            / f"{name}.mp3"
+        path = get_asset_path(
+            "audio",
+            "music",
+            f"{name}.mp3"
         )
 
         if not path.exists():
@@ -175,6 +185,7 @@ class AudioManager:
         pygame.mixer.music.stop()
 
         try:
+
             pygame.mixer.music.load(
                 path
             )
@@ -187,21 +198,27 @@ class AudioManager:
                 -1
             )
 
+            self.current_music = path
             self.current_music_name = name
 
         except pygame.error as error:
+
             print(
                 "Could not play music:",
                 error
             )
 
-    def stop_music(self):
+    def stop_music(
+        self
+    ):
         pygame.mixer.music.stop()
 
         self.current_music = None
         self.current_music_name = None
 
-    def get_music_volume(self):
+    def get_music_volume(
+        self
+    ):
         return (
             self.settings.master_volume
             * self.settings.music_volume
@@ -211,7 +228,9 @@ class AudioManager:
     # UPDATE
     # -------------------------------------------------
 
-    def update(self):
+    def update(
+        self
+    ):
         for sound in self.sounds:
             sound.update_volume()
 

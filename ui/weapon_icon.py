@@ -1,13 +1,6 @@
 import pygame
-from pathlib import Path
 
-
-WEAPON_ICON_FOLDER = (
-    Path(__file__).resolve().parent.parent
-    / "assets"
-    / "sprites"
-    / "ui"
-)
+from game.asset_helper import load_image
 
 
 class WeaponIcon:
@@ -42,17 +35,17 @@ class WeaponIcon:
         )
 
     def load_sprite(self):
-        path = (
-            WEAPON_ICON_FOLDER
-            / self.get_filename()
-        )
-
         try:
-            return pygame.image.load(
-                path
-            ).convert_alpha()
+            return load_image(
+                "sprites",
+                "ui",
+                self.get_filename()
+            )
 
-        except pygame.error:
+        except (
+            FileNotFoundError,
+            pygame.error
+        ):
             return None
 
     # -------------------------------------------------

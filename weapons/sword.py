@@ -1,18 +1,9 @@
 import pygame
 import math
-from pathlib import Path
 
 from weapons.weapon import Weapon
 from upgrades.upgrade_pool import SWORD_UPGRADES
 from entities.magic_slash import MagicSlash
-
-
-SOUND_FOLDER = (
-    Path(__file__).resolve().parent.parent
-    / "assets"
-    / "audio"
-    / "game"
-)
 
 
 class Sword(Weapon):
@@ -59,7 +50,7 @@ class Sword(Weapon):
         # -------------------------------------------------
 
         self.swing_sound = self.player.game.audio.load_game_sound(
-            SOUND_FOLDER / "sword_swing.mp3"
+            "sword_swing.mp3"
         )
 
         self.upgrade_pool = SWORD_UPGRADES
