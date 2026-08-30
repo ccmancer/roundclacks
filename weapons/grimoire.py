@@ -433,6 +433,11 @@ class Grimoire(Weapon):
                     0.5
                     * upgrade.stacks
                 )
+            if upgrade.name == "Dark Ritual":
+                lifesteal += (
+                    2
+                    * upgrade.stacks
+                )
 
         return lifesteal
 
@@ -442,6 +447,10 @@ class Grimoire(Weapon):
         for upgrade in self.upgrades:
 
             if upgrade.name == "Tribeam":
+                damage += upgrade.stacks
+
+        for upgrade in self.upgrades:
+            if upgrade.name == "Dark Ritual":
                 damage += upgrade.stacks
 
         return damage

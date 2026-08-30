@@ -306,6 +306,11 @@ class Weapon:
                     1.5 ** upgrade.stacks
                 )
 
+            elif upgrade.name == "Metal Enchantment":
+                multiplier *= (
+                    1.5 ** upgrade.stacks
+                )
+
         return multiplier
 
     def get_radius_multiplier(
@@ -350,6 +355,11 @@ class Weapon:
 
             elif upgrade.name == "Light Armor":
 
+                multiplier *= (
+                    1.25 ** upgrade.stacks
+                )
+
+            elif upgrade.name == "Metal Enchantment":
                 multiplier *= (
                     1.25 ** upgrade.stacks
                 )

@@ -350,7 +350,7 @@ BOMB_UPGRADES = [
     Upgrade(
         "Direct Hit",
         "rare",
-        "-75% blast radius, +100% damage"
+        "-25% blast radius, +100% damage"
     ),
 
     # Super Rare
@@ -464,7 +464,7 @@ GRIMOIRE_UPGRADES = [
     Upgrade(
         "Dark Ritual",
         "super rare",
-        "Gain rapid health regeneration"
+        "+200% lifesteal, beam costs 1 health per tick while firing"
     ),
 
     Upgrade(
