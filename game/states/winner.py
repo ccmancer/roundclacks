@@ -19,71 +19,54 @@ class WinnerState(State):
         self.winner = winner
 
         # -------------------------------------------------
+        # Victory music
+        # -------------------------------------------------
+
+        self.game.audio.play_music(
+            "victory"
+        )
+
+        # -------------------------------------------------
         # Fonts
         # -------------------------------------------------
 
         self.title_font = pygame.font.Font(
             None,
-            60
+            55
         )
 
-        self.score_font = pygame.font.Font(
+        self.info_font = pygame.font.Font(
             None,
-            45
+            28
         )
 
         # -------------------------------------------------
         # Buttons
         # -------------------------------------------------
 
-        screen_width = (
-            self.game.screen.get_width()
-        )
-
-        button_width = 200
-        button_height = 60
-        button_gap = 20
-
-        total_width = (
-            button_width * 2
-            + button_gap
-        )
-
-        start_x = (
-            screen_width
-            - total_width
-        ) // 2
-
         self.rematch_button = Button(
-            "REMATCH",
+            "Rematch",
             (
-                start_x,
-                400,
-                button_width,
-                button_height
+                210,
+                500,
+                300,
+                60
             ),
             font_size=30,
             audio=self.game.audio
         )
 
         self.menu_button = Button(
-            "MENU",
+            "Return to Menu",
             (
-                start_x
-                + button_width
-                + button_gap,
-                400,
-                button_width,
-                button_height
+                210,
+                570,
+                300,
+                60
             ),
             font_size=30,
             audio=self.game.audio
         )
-
-        self.buttons = [
-            self.rematch_button,
-            self.menu_button
-        ]
 
     # -------------------------------------------------
     # EVENTS
@@ -95,38 +78,35 @@ class WinnerState(State):
     ):
         for event in events:
 
+            if event.type == pygame.QUIT:
+
+                self.game.running = False
+
+                return
+
             if event.type == pygame.KEYDOWN:
 
                 if event.key == pygame.K_ESCAPE:
+
                     self.game.return_to_main_menu()
 
-            elif event.type == pygame.MOUSEBUTTONDOWN:
+                    return
 
-                if event.button != 1:
-                    continue
+            if self.rematch_button.clicked(
+                event
+            ):
 
-                if self.rematch_button.clicked(
-                    event
-                ):
-                    self.rematch()
+                self.game.start_weapon_select()
 
-                elif self.menu_button.clicked(
-                    event
-                ):
-                    self.game.return_to_main_menu()
+                return
 
-    # -------------------------------------------------
-    # REMATCH
-    # -------------------------------------------------
+            if self.menu_button.clicked(
+                event
+            ):
 
-    def rematch(self):
-        from game.states.weapon_select import (
-            WeaponSelectState
-        )
+                self.game.return_to_main_menu()
 
-        self.game.state = WeaponSelectState(
-            self.game
-        )
+                return
 
     # -------------------------------------------------
     # UPDATE
@@ -138,69 +118,12 @@ class WinnerState(State):
     ):
         mouse_position = pygame.mouse.get_pos()
 
-        for button in self.buttons:
-            button.update(
-                mouse_position
-            )
-
-    # -------------------------------------------------
-    # TEXT
-    # -------------------------------------------------
-
-    def draw_outlined_text(
-        self,
-        screen,
-        text,
-        font,
-        center,
-        color,
-        outline_color=(0, 0, 0),
-        outline_width=2
-    ):
-        outline = font.render(
-            text,
-            True,
-            outline_color
+        self.rematch_button.update(
+            mouse_position
         )
 
-        foreground = font.render(
-            text,
-            True,
-            color
-        )
-
-        outline_rect = outline.get_rect(
-            center=center
-        )
-
-        foreground_rect = foreground.get_rect(
-            center=center
-        )
-
-        for dx in range(
-            -outline_width,
-            outline_width + 1
-        ):
-
-            for dy in range(
-                -outline_width,
-                outline_width + 1
-            ):
-
-                if dx == 0 and dy == 0:
-                    continue
-
-                screen.blit(
-                    outline,
-                    (
-                        outline_rect.x + dx,
-                        outline_rect.y + dy
-                    )
-                )
-
-        screen.blit(
-            foreground,
-            foreground_rect
+        self.menu_button.update(
+            mouse_position
         )
 
     # -------------------------------------------------
@@ -219,22 +142,73 @@ class WinnerState(State):
             screen.get_width()
         )
 
-        self.draw_outlined_text(
-            screen,
-            f"{self.winner.name} WINS!",
-            self.title_font,
-            (
-                screen_width // 2,
-                180
-            ),
+        # -------------------------------------------------
+        # Title
+        # -------------------------------------------------
+
+        title = self.title_font.render(
+            "WINNER!",
+            True,
             self.winner.color
         )
 
-        score = self.score_font.render(
+        title_rect = title.get_rect(
+            center=(
+                screen_width // 2,
+                100
+            )
+        )
+
+        screen.blit(
+            title,
+            title_rect
+        )
+
+        # -------------------------------------------------
+        # Winner
+        # -------------------------------------------------
+
+        winner_name = self.info_font.render(
+            self.winner.name,
+            True,
+            self.winner.color
+        )
+
+        winner_name_rect = (
+            winner_name.get_rect(
+                center=(
+                    screen_width // 2,
+                    180
+                )
+            )
+        )
+
+        screen.blit(
+            winner_name,
+            winner_name_rect
+        )
+
+        # -------------------------------------------------
+        # Score
+        # -------------------------------------------------
+
+        player1_score = getattr(
+            self.match_state.match,
+            "player1_wins",
+            0
+        )
+
+        player2_score = getattr(
+            self.match_state.match,
+            "player2_wins",
+            0
+        )
+
+        score = self.info_font.render(
             (
-                f"{self.match_state.match.player1_wins}"
+                f"{player1_score}"
                 f" - "
-                f"{self.match_state.match.player2_wins}"
+                f"{player2_score}"
             ),
             True,
             "black"
@@ -243,7 +217,7 @@ class WinnerState(State):
         score_rect = score.get_rect(
             center=(
                 screen_width // 2,
-                270
+                250
             )
         )
 
@@ -252,7 +226,14 @@ class WinnerState(State):
             score_rect
         )
 
-        for button in self.buttons:
-            button.draw(
-                screen
-            )
+        # -------------------------------------------------
+        # Buttons
+        # -------------------------------------------------
+
+        self.rematch_button.draw(
+            screen
+        )
+
+        self.menu_button.draw(
+            screen
+        )

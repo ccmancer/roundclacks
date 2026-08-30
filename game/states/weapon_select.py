@@ -44,6 +44,10 @@ class WeaponSelectState(State):
             game
         )
 
+        self.game.audio.play_music(
+            "character_select"
+        )
+
         # -------------------------------------------------
         # Selection
         # -------------------------------------------------

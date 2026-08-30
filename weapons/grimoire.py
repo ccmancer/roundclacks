@@ -63,7 +63,6 @@ class Grimoire(Weapon):
         self.upgrade_pool = GRIMOIRE_UPGRADES
 
         self.attack_slow_timer = 0
-
         self.tribeam_self_damage_timer = 0
 
     # -------------------------------------------------
@@ -73,19 +72,11 @@ class Grimoire(Weapon):
     def update(self, dt):
         was_attacking = self.is_attacking()
 
-        # -------------------------------------------------
-        # Cooldown
-        # -------------------------------------------------
-
         if self.cooldown_timer > 0:
             self.cooldown_timer -= dt
 
             if self.cooldown_timer < 0:
                 self.cooldown_timer = 0
-
-        # -------------------------------------------------
-        # Beam timer
-        # -------------------------------------------------
 
         if self.attack_slow_timer > 0:
             self.attack_slow_timer -= dt
@@ -93,20 +84,12 @@ class Grimoire(Weapon):
             if self.attack_slow_timer < 0:
                 self.attack_slow_timer = 0
 
-        # -------------------------------------------------
-        # Beam ended
-        # -------------------------------------------------
-
         if (
             was_attacking
             and not self.is_attacking()
         ):
             self.stop_beam_sound()
             self.start_cooldown()
-
-        # -------------------------------------------------
-        # Tribeam self-damage timer
-        # -------------------------------------------------
 
         if self.tribeam_self_damage_timer > 0:
             self.tribeam_self_damage_timer -= dt
@@ -130,10 +113,6 @@ class Grimoire(Weapon):
             self.tribeam_self_damage_timer = (
                 self.get_tick_interval()
             )
-
-        # -------------------------------------------------
-        # Orbit
-        # -------------------------------------------------
 
         self.angle += (
             self.get_rotation_speed()
@@ -483,8 +462,13 @@ class Grimoire(Weapon):
     # RESET
     # -------------------------------------------------
 
-    def reset(self):
-        super().reset()
+    def reset(
+        self,
+        rng=None
+    ):
+        super().reset(
+            rng
+        )
 
         self.attack_slow_timer = 0
         self.tribeam_self_damage_timer = 0

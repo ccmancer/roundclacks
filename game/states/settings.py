@@ -15,6 +15,10 @@ class SettingsState(State):
             game
         )
 
+        self.game.audio.play_music(
+            "settings"
+        )
+
         self.font = pygame.font.Font(
             None,
             40

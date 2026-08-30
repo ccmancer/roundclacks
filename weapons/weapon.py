@@ -60,6 +60,7 @@ class Weapon:
         self.sprite = None
 
         if sprite_filename is not None:
+
             self.sprite = pygame.image.load(
                 SPRITE_FOLDER / sprite_filename
             ).convert_alpha()
@@ -68,8 +69,12 @@ class Weapon:
     # UPDATE / DRAW
     # -------------------------------------------------
 
-    def update(self, dt):
+    def update(
+        self,
+        dt
+    ):
         if self.cooldown_timer > 0:
+
             self.cooldown_timer -= dt
 
             if self.cooldown_timer < 0:
@@ -90,10 +95,16 @@ class Weapon:
             + self.direction * self.distance
         )
 
-    def draw_before_player(self, screen):
+    def draw_before_player(
+        self,
+        screen
+    ):
         pass
 
-    def draw(self, screen):
+    def draw(
+        self,
+        screen
+    ):
         if self.sprite is None:
             return
 
@@ -115,16 +126,25 @@ class Weapon:
     # SPRITE
     # -------------------------------------------------
 
-    def get_sprite_length(self):
+    def get_sprite_length(
+        self
+    ):
         return self.base_sprite_length
 
-    def get_sprite_width(self):
+    def get_sprite_width(
+        self
+    ):
         return self.base_sprite_width
 
-    def get_sprite_scale(self):
+    def get_sprite_scale(
+        self
+    ):
         return 1
 
-    def get_sprite(self, angle=None):
+    def get_sprite(
+        self,
+        angle=None
+    ):
         if self.sprite is None:
             return None
 
@@ -164,7 +184,9 @@ class Weapon:
     # READY GLOW
     # -------------------------------------------------
 
-    def get_ready_glow_strength(self):
+    def get_ready_glow_strength(
+        self
+    ):
         if not self.can_attack():
             return 0
 
@@ -185,7 +207,10 @@ class Weapon:
         sprite,
         strength
     ):
-        if sprite is None or strength <= 0:
+        if (
+            sprite is None
+            or strength <= 0
+        ):
             return sprite
 
         sprite = sprite.copy()
@@ -205,47 +230,67 @@ class Weapon:
 
         return sprite
 
-    def modify_player_sprite(self, sprite):
+    def modify_player_sprite(
+        self,
+        sprite
+    ):
         return sprite
 
     # -------------------------------------------------
     # ATTACK
     # -------------------------------------------------
 
-    def attack(self):
+    def attack(
+        self
+    ):
         raise NotImplementedError
 
-    def is_attacking(self):
+    def is_attacking(
+        self
+    ):
         return False
 
-    def get_damage(self):
+    def get_damage(
+        self
+    ):
         return self.base_damage
 
-    def get_attack_cooldown(self):
+    def get_attack_cooldown(
+        self
+    ):
         return self.base_cooldown
 
-    def can_attack(self):
+    def can_attack(
+        self
+    ):
         return (
             self.cooldown_timer <= 0
             and not self.is_attacking()
         )
 
-    def start_cooldown(self):
+    def start_cooldown(
+        self
+    ):
         self.cooldown_timer = (
             self.get_attack_cooldown()
         )
 
-    def reset_cooldown(self):
+    def reset_cooldown(
+        self
+    ):
         self.cooldown_timer = 0
 
     # -------------------------------------------------
     # PLAYER STATS
     # -------------------------------------------------
 
-    def get_max_health_multiplier(self):
+    def get_max_health_multiplier(
+        self
+    ):
         multiplier = 1
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "Armor":
                 multiplier *= (
                     1.25 ** upgrade.stacks
@@ -268,10 +313,13 @@ class Weapon:
 
         return multiplier
 
-    def get_radius_multiplier(self):
+    def get_radius_multiplier(
+        self
+    ):
         multiplier = 1
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "Juggernaut":
                 multiplier *= (
                     1.5 ** upgrade.stacks
@@ -284,11 +332,15 @@ class Weapon:
 
         return multiplier
 
-    def get_speed_multiplier(self):
+    def get_speed_multiplier(
+        self
+    ):
         multiplier = 1
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "Rage":
+
                 missing_health = (
                     1
                     - self.player.get_health_ratio()
@@ -302,16 +354,22 @@ class Weapon:
                 )
 
             elif upgrade.name == "Light Armor":
+
                 multiplier *= (
                     1.25 ** upgrade.stacks
                 )
 
         return multiplier
 
-    def get_rotation_speed(self):
+    def get_rotation_speed(
+        self
+    ):
         return self.rotation_speed
 
-    def modify_incoming_damage(self, damage):
+    def modify_incoming_damage(
+        self,
+        damage
+    ):
         return damage
 
     # -------------------------------------------------
@@ -336,9 +394,11 @@ class Weapon:
         # -------------------------------------------------
 
         if self.player.position.x - radius <= 0:
+
             self.player.position.x = radius
 
             if self.player.velocity.x < 0:
+
                 self.player.velocity.x *= -1
 
                 self.player.velocity = (
@@ -357,11 +417,13 @@ class Weapon:
         # -------------------------------------------------
 
         elif self.player.position.x + radius >= width:
+
             self.player.position.x = (
                 width - radius
             )
 
             if self.player.velocity.x > 0:
+
                 self.player.velocity.x *= -1
 
                 self.player.velocity = (
@@ -380,9 +442,11 @@ class Weapon:
         # -------------------------------------------------
 
         if self.player.position.y - radius <= 0:
+
             self.player.position.y = radius
 
             if self.player.velocity.y < 0:
+
                 self.player.velocity.y *= -1
 
                 self.player.velocity = (
@@ -401,11 +465,13 @@ class Weapon:
         # -------------------------------------------------
 
         elif self.player.position.y + radius >= height:
+
             self.player.position.y = (
                 height - radius
             )
 
             if self.player.velocity.y > 0:
+
                 self.player.velocity.y *= -1
 
                 self.player.velocity = (
@@ -427,6 +493,7 @@ class Weapon:
             bounced
             and self.player.velocity.length_squared() > 0
         ):
+
             self.player.velocity.scale_to_length(
                 self.player.get_speed()
             )
@@ -435,18 +502,29 @@ class Weapon:
     # COLLISION / UPGRADES
     # -------------------------------------------------
 
-    def handle_collision(self, opponent):
+    def handle_collision(
+        self,
+        opponent
+    ):
         pass
 
-    def has_upgrade(self, name):
+    def has_upgrade(
+        self,
+        name
+    ):
         return any(
             upgrade.name == name
             for upgrade in self.upgrades
         )
 
-    def add_upgrade(self, upgrade):
+    def add_upgrade(
+        self,
+        upgrade
+    ):
         for existing_upgrade in self.upgrades:
+
             if existing_upgrade.name == upgrade.name:
+
                 existing_upgrade.stacks += 1
                 return
 
@@ -462,15 +540,23 @@ class Weapon:
     # RESET / DEATH
     # -------------------------------------------------
 
-    def reset(self):
+    def reset(
+        self,
+        rng=None
+    ):
         self.cooldown_timer = 0
 
-        self.angle = random.uniform(
+        if rng is None:
+            rng = random
+
+        self.angle = rng.uniform(
             0,
             math.tau
         )
 
-    def on_death(self):
+    def on_death(
+        self
+    ):
         """
         Called when the round ends.
 

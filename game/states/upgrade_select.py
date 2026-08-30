@@ -22,9 +22,6 @@ SOUND_FOLDER = (
 
 
 class UpgradeSelectState(State):
-    # -------------------------------------------------
-    # Layout
-    # -------------------------------------------------
 
     CARD_WIDTH = 200
     CARD_HEIGHT = 280
@@ -40,8 +37,10 @@ class UpgradeSelectState(State):
     CARD_SELECT_DURATION = 0.4
 
     # -------------------------------------------------
-    # Colors
+    # Netplay timer
     # -------------------------------------------------
+
+    PICK_TIME_LIMIT = 30.0
 
     RARITY_COLORS = {
         "common": (255, 255, 255),
@@ -49,25 +48,74 @@ class UpgradeSelectState(State):
         "super rare": (255, 210, 70)
     }
 
-    # -------------------------------------------------
-    # Init
-    # -------------------------------------------------
-
     def __init__(
         self,
         match_state,
-        player
+        player,
+        interactive=True,
+        previous_upgrade=None
     ):
         super().__init__(
             match_state.game
         )
 
         self.match_state = match_state
+
+        # -------------------------------------------------
+        # Player whose cards are being shown
+        # -------------------------------------------------
+
+        self.player = player
+
+        # -------------------------------------------------
+        # Local MatchState compatibility
+        # -------------------------------------------------
+
         self.loser = player
+
+        # -------------------------------------------------
+        # Only this client can actually select
+        # -------------------------------------------------
+
+        self.interactive = interactive
+
+        self.player_number = (
+            1
+            if player is match_state.player1
+            else 2
+        )
+
+        # -------------------------------------------------
+        # Detect netplay
+        # -------------------------------------------------
+
+        self.is_netplay = (
+            match_state.__class__.__name__
+            == "NetplayMatchState"
+        )
+
+        # -------------------------------------------------
+        # Previously revealed choice
+        # -------------------------------------------------
+
+        self.previous_upgrade = (
+            previous_upgrade
+        )
+
+        # -------------------------------------------------
+        # Upgrade choices
+        # -------------------------------------------------
 
         self.upgrade_choices = (
             generate_upgrade_choices(
-                player.weapon.upgrade_pool
+                player.weapon.upgrade_pool,
+                random_source=(
+                    self.match_state.match.random
+                ),
+                frame=(
+                    self.match_state.match.round_number
+                ),
+                player=self.player_number
             )
         )
 
@@ -90,24 +138,28 @@ class UpgradeSelectState(State):
             17
         )
 
+        self.small_font = pygame.font.Font(
+            None,
+            22
+        )
+
         # -------------------------------------------------
         # Sounds
         # -------------------------------------------------
 
         self.card_present_sound = (
             self.game.audio.load_ui_sound(
-                SOUND_FOLDER / "card_present.mp3"
+                SOUND_FOLDER
+                / "card_present.mp3"
             )
         )
 
         self.card_select_sound = (
             self.game.audio.load_ui_sound(
-                SOUND_FOLDER / "card_select.mp3"
+                SOUND_FOLDER
+                / "card_select.mp3"
             )
         )
-
-        # Play once when the upgrade selection appears.
-        self.card_present_sound.play()
 
         # -------------------------------------------------
         # Card sprites
@@ -120,6 +172,7 @@ class UpgradeSelectState(State):
             "rare",
             "super rare"
         ):
+
             filename = (
                 rarity.replace(
                     " ",
@@ -128,14 +181,9 @@ class UpgradeSelectState(State):
                 + "_card.png"
             )
 
-            path = (
-                UPGRADE_FOLDER
-                / filename
-            )
-
             self.card_sprites[rarity] = (
                 pygame.image.load(
-                    path
+                    UPGRADE_FOLDER / filename
                 ).convert_alpha()
             )
 
@@ -146,6 +194,7 @@ class UpgradeSelectState(State):
         self.upgrade_sprites = []
 
         for upgrade in self.upgrade_choices:
+
             self.upgrade_sprites.append(
                 self.load_upgrade_sprite(
                     upgrade.name
@@ -153,7 +202,7 @@ class UpgradeSelectState(State):
             )
 
         # -------------------------------------------------
-        # Card entrance animation
+        # Animation
         # -------------------------------------------------
 
         self.card_times = [
@@ -168,13 +217,22 @@ class UpgradeSelectState(State):
         self.elapsed = 0
         self.cards_finished = False
 
-        # -------------------------------------------------
-        # Selection animation
-        # -------------------------------------------------
-
         self.selected_index = None
         self.selection_timer = 0
         self.selection_complete = False
+
+        # -------------------------------------------------
+        # Netplay timer
+        # -------------------------------------------------
+
+        self.pick_elapsed = 0.0
+
+        # -------------------------------------------------
+        # Sound flags
+        # -------------------------------------------------
+
+        self.card_present_played = False
+        self.card_select_played = False
 
     # -------------------------------------------------
     # ASSET HELPERS
@@ -192,10 +250,8 @@ class UpgradeSelectState(State):
             filename
         )
 
-        filename = filename.strip("_")
-
         return (
-            filename
+            filename.strip("_")
             + ".png"
         )
 
@@ -203,17 +259,17 @@ class UpgradeSelectState(State):
         self,
         name
     ):
-        path = (
-            UPGRADE_FOLDER
-            / self.get_upgrade_filename(name)
-        )
-
         try:
+
             return pygame.image.load(
-                path
+                UPGRADE_FOLDER
+                / self.get_upgrade_filename(
+                    name
+                )
             ).convert_alpha()
 
         except pygame.error:
+
             return None
 
     # -------------------------------------------------
@@ -226,20 +282,64 @@ class UpgradeSelectState(State):
     ):
         for event in events:
 
+            # -------------------------------------------------
+            # Window close
+            # -------------------------------------------------
+
+            if event.type == pygame.QUIT:
+
+                if self.is_netplay:
+
+                    self.match_state.close()
+
+                else:
+
+                    self.game.running = False
+
+                return
+
+            # -------------------------------------------------
+            # Spectator
+            # -------------------------------------------------
+
+            if not self.interactive:
+
+                continue
+
+            # -------------------------------------------------
+            # Escape
+            # -------------------------------------------------
+
             if event.type == pygame.KEYDOWN:
 
                 if event.key == pygame.K_ESCAPE:
-                    self.game.running = False
+
+                    if self.is_netplay:
+
+                        self.match_state.close()
+
+                    else:
+
+                        self.game.running = False
+
+                    return
+
+            # -------------------------------------------------
+            # Mouse selection
+            # -------------------------------------------------
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
 
                 if event.button != 1:
+
                     continue
 
                 if not self.cards_finished:
+
                     continue
 
                 if self.selected_index is not None:
+
                     continue
 
                 mouse_position = event.pos
@@ -249,16 +349,21 @@ class UpgradeSelectState(State):
                         self.upgrade_choices
                     )
                 ):
+
                     rect = self.get_card_rect(
                         i,
-                        hovered=False
+                        False
                     )
 
                     if rect.collidepoint(
                         mouse_position
                     ):
-                        self.select_upgrade(i)
-                        break
+
+                        self.select_upgrade(
+                            i
+                        )
+
+                        return
 
     # -------------------------------------------------
     # SELECT
@@ -268,17 +373,34 @@ class UpgradeSelectState(State):
         self,
         index
     ):
-        if index >= len(
-            self.upgrade_choices
+        if not self.interactive:
+
+            return
+
+        if self.selected_index is not None:
+
+            return
+
+        if not (
+            0 <= index
+            < len(self.upgrade_choices)
         ):
+
             return
 
         self.selected_index = index
         self.selection_timer = 0
         self.selection_complete = False
 
-        # Play immediately when a card is picked.
-        self.card_select_sound.play()
+        # -------------------------------------------------
+        # Cards fly back up.
+        # -------------------------------------------------
+
+        if not self.card_select_played:
+
+            self.card_select_sound.play()
+
+            self.card_select_played = True
 
     # -------------------------------------------------
     # UPDATE
@@ -289,12 +411,41 @@ class UpgradeSelectState(State):
         dt
     ):
         # -------------------------------------------------
-        # Card entrance
+        # Waiting for selection
         # -------------------------------------------------
 
         if self.selected_index is None:
 
             self.elapsed += dt
+
+            # -------------------------------------------------
+            # Play presentation sound once when the cards
+            # begin entering the screen.
+            # -------------------------------------------------
+
+            if (
+                not self.card_present_played
+                and self.elapsed >= 0
+            ):
+
+                self.card_present_sound.play()
+
+                self.card_present_played = True
+
+            # -------------------------------------------------
+            # Netplay timer
+            # -------------------------------------------------
+
+            if (
+                self.is_netplay
+                and self.interactive
+            ):
+
+                self.pick_elapsed += dt
+
+            # -------------------------------------------------
+            # Card animation
+            # -------------------------------------------------
 
             self.cards_finished = True
 
@@ -305,8 +456,45 @@ class UpgradeSelectState(State):
                     < start_time
                     + self.CARD_SLIDE_DURATION
                 ):
+
                     self.cards_finished = False
+
                     break
+
+            # -------------------------------------------------
+            # Netplay timeout
+            # -------------------------------------------------
+
+            if (
+                self.is_netplay
+                and self.interactive
+                and self.cards_finished
+                and self.pick_elapsed
+                >= self.PICK_TIME_LIMIT
+            ):
+
+                random_index = (
+                    self.match_state.match.random.randint(
+                        self.player_number,
+                        "upgrade_timeout",
+                        0,
+                        len(
+                            self.upgrade_choices
+                        ) - 1
+                    )
+                )
+
+                self.select_upgrade(
+                    random_index
+                )
+
+            return
+
+        # -------------------------------------------------
+        # Spectators
+        # -------------------------------------------------
+
+        if not self.interactive:
 
             return
 
@@ -321,6 +509,7 @@ class UpgradeSelectState(State):
             >= self.CARD_SELECT_DURATION
             and not self.selection_complete
         ):
+
             self.selection_complete = True
 
             upgrade = (
@@ -332,6 +521,30 @@ class UpgradeSelectState(State):
             self.match_state.upgrade_selected(
                 upgrade
             )
+
+    # -------------------------------------------------
+    # EXTERNAL REVEAL
+    # -------------------------------------------------
+
+    def reveal_upgrade(
+        self,
+        upgrade_name
+    ):
+        for i, upgrade in enumerate(
+            self.upgrade_choices
+        ):
+
+            if upgrade.name == upgrade_name:
+
+                self.selected_index = i
+
+                self.selection_timer = (
+                    self.CARD_SELECT_DURATION
+                )
+
+                self.selection_complete = True
+
+                return
 
     # -------------------------------------------------
     # CARD POSITION
@@ -402,6 +615,7 @@ class UpgradeSelectState(State):
         )
 
         if self.selected_index is None:
+
             return base_y
 
         progress = (
@@ -409,6 +623,7 @@ class UpgradeSelectState(State):
         )
 
         if index == self.selected_index:
+
             return base_y
 
         target_y = (
@@ -463,8 +678,10 @@ class UpgradeSelectState(State):
 
         if (
             hovered
+            and self.interactive
             and self.selected_index is None
         ):
+
             y -= self.CARD_HOVER_LIFT
 
         return pygame.Rect(
@@ -490,8 +707,20 @@ class UpgradeSelectState(State):
         # Header
         # -------------------------------------------------
 
+        if self.interactive:
+
+            title_text = (
+                "CHOOSE AN UPGRADE"
+            )
+
+        else:
+
+            title_text = (
+                "OPPONENT'S UPGRADE"
+            )
+
         title = self.title_font.render(
-            "CHOOSE AN UPGRADE",
+            title_text,
             True,
             (255, 255, 255)
         )
@@ -512,22 +741,10 @@ class UpgradeSelectState(State):
         # Player name
         # -------------------------------------------------
 
-        player_name = getattr(
-            self.loser,
-            "name",
-            "PLAYER"
-        )
-
-        player_color = getattr(
-            self.loser,
-            "color",
-            (255, 255, 255)
-        )
-
         player_text = self.title_font.render(
-            player_name,
+            self.player.name,
             True,
-            player_color
+            self.player.color
         )
 
         player_rect = player_text.get_rect(
@@ -543,6 +760,103 @@ class UpgradeSelectState(State):
         )
 
         # -------------------------------------------------
+        # Previous choice
+        # -------------------------------------------------
+
+        if self.previous_upgrade is not None:
+
+            previous_text = (
+                f"Opponent chose: "
+                f"{self.previous_upgrade}"
+            )
+
+            rendered = self.small_font.render(
+                previous_text,
+                True,
+                (255, 210, 70)
+            )
+
+            rect = rendered.get_rect(
+                center=(
+                    screen.get_width() // 2,
+                    135
+                )
+            )
+
+            screen.blit(
+                rendered,
+                rect
+            )
+
+        # -------------------------------------------------
+        # Timer
+        # -------------------------------------------------
+
+        if (
+            self.is_netplay
+            and self.interactive
+        ):
+
+            remaining = max(
+                0,
+                int(
+                    self.PICK_TIME_LIMIT
+                    - self.pick_elapsed
+                    + 0.999
+                )
+            )
+
+            if self.selected_index is not None:
+
+                timer_text = "SELECTED"
+
+                timer_color = (
+                    120,
+                    220,
+                    120
+                )
+
+            else:
+
+                timer_text = (
+                    f"{remaining}s"
+                )
+
+                if remaining <= 10:
+
+                    timer_color = (
+                        255,
+                        80,
+                        80
+                    )
+
+                else:
+
+                    timer_color = (
+                        255,
+                        255,
+                        255
+                    )
+
+            timer = self.small_font.render(
+                timer_text,
+                True,
+                timer_color
+            )
+
+            timer_rect = timer.get_rect(
+                center=(
+                    screen.get_width() // 2,
+                    165
+                )
+            )
+
+            screen.blit(
+                timer,
+                timer_rect
+            )
+
+        # -------------------------------------------------
         # Cards
         # -------------------------------------------------
 
@@ -551,13 +865,15 @@ class UpgradeSelectState(State):
         for i, upgrade in enumerate(
             self.upgrade_choices
         ):
+
             normal_rect = self.get_card_rect(
                 i,
-                hovered=False
+                False
             )
 
             hovered = (
-                self.cards_finished
+                self.interactive
+                and self.cards_finished
                 and self.selected_index is None
                 and normal_rect.collidepoint(
                     mouse_position
@@ -566,7 +882,7 @@ class UpgradeSelectState(State):
 
             rect = self.get_card_rect(
                 i,
-                hovered=hovered
+                hovered
             )
 
             self.draw_card(
@@ -575,6 +891,30 @@ class UpgradeSelectState(State):
                 upgrade,
                 rect,
                 hovered
+            )
+
+        # -------------------------------------------------
+        # Spectator message
+        # -------------------------------------------------
+
+        if not self.interactive:
+
+            text = self.small_font.render(
+                "WATCHING",
+                True,
+                (180, 180, 180)
+            )
+
+            rect = text.get_rect(
+                center=(
+                    screen.get_width() // 2,
+                    195
+                )
+            )
+
+            screen.blit(
+                text,
+                rect
             )
 
     # -------------------------------------------------
@@ -593,16 +933,8 @@ class UpgradeSelectState(State):
             upgrade.rarity.lower()
         )
 
-        # -------------------------------------------------
-        # Card base
-        # -------------------------------------------------
-
-        card_sprite = (
-            self.card_sprites[rarity]
-        )
-
         card_sprite = pygame.transform.smoothscale(
-            card_sprite,
+            self.card_sprites[rarity],
             (
                 self.CARD_WIDTH,
                 self.CARD_HEIGHT
@@ -615,10 +947,21 @@ class UpgradeSelectState(State):
         )
 
         # -------------------------------------------------
-        # Hover outline
+        # Selected outline
         # -------------------------------------------------
 
-        if hovered:
+        if (
+            self.selected_index == index
+        ):
+
+            pygame.draw.rect(
+                screen,
+                (255, 255, 255),
+                rect,
+                4
+            )
+
+        elif hovered:
 
             pygame.draw.rect(
                 screen,
@@ -627,10 +970,6 @@ class UpgradeSelectState(State):
                 2
             )
 
-        # -------------------------------------------------
-        # Text colors
-        # -------------------------------------------------
-
         rarity_color = (
             self.RARITY_COLORS.get(
                 rarity,
@@ -638,23 +977,16 @@ class UpgradeSelectState(State):
             )
         )
 
-        if rarity == "super rare":
-            name_color = rarity_color
-        else:
-            name_color = (
-                255,
-                255,
-                255
-            )
-
         # -------------------------------------------------
-        # Upgrade name
+        # Name
         # -------------------------------------------------
 
         name = self.name_font.render(
             upgrade.name,
             True,
-            name_color
+            rarity_color
+            if rarity == "super rare"
+            else (255, 255, 255)
         )
 
         name_rect = name.get_rect(
@@ -670,7 +1002,7 @@ class UpgradeSelectState(State):
         )
 
         # -------------------------------------------------
-        # Upgrade image
+        # Upgrade sprite
         # -------------------------------------------------
 
         upgrade_sprite = (
@@ -679,13 +1011,11 @@ class UpgradeSelectState(State):
 
         if upgrade_sprite is not None:
 
-            image_size = 75
-
             image = pygame.transform.smoothscale(
                 upgrade_sprite,
                 (
-                    image_size,
-                    image_size
+                    75,
+                    75
                 )
             )
 
@@ -719,7 +1049,7 @@ class UpgradeSelectState(State):
         )
 
     # -------------------------------------------------
-    # TEXT WRAPPING
+    # TEXT
     # -------------------------------------------------
 
     def draw_wrapped_text(
@@ -754,6 +1084,7 @@ class UpgradeSelectState(State):
             else:
 
                 if current_line:
+
                     lines.append(
                         current_line
                     )
@@ -761,6 +1092,7 @@ class UpgradeSelectState(State):
                 current_line = word
 
         if current_line:
+
             lines.append(
                 current_line
             )

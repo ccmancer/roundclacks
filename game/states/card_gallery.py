@@ -44,6 +44,10 @@ class CardGalleryState(State):
             game
         )
 
+        self.game.audio.play_music(
+            "card_gallery"
+        )
+
         # -------------------------------------------------
         # Fonts
         # -------------------------------------------------

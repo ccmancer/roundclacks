@@ -21,6 +21,10 @@ class MainMenuState(State):
             game
         )
 
+        self.game.audio.play_music(
+            "main_menu"
+        )
+
         self.title_font = pygame.font.Font(
             None,
             80
@@ -33,6 +37,7 @@ class MainMenuState(State):
         for i, option in enumerate(
             self.OPTIONS
         ):
+
             self.buttons.append(
                 Button(
                     option,
@@ -47,6 +52,10 @@ class MainMenuState(State):
                 )
             )
 
+    # -------------------------------------------------
+    # EVENTS
+    # -------------------------------------------------
+
     def handle_events(
         self,
         events
@@ -54,13 +63,28 @@ class MainMenuState(State):
         for event in events:
 
             if event.type == pygame.QUIT:
+
                 self.game.running = False
+
+                return
 
             for i, button in enumerate(
                 self.buttons
             ):
-                if button.clicked(event):
-                    self.select_option(i)
+
+                if button.clicked(
+                    event
+                ):
+
+                    self.select_option(
+                        i
+                    )
+
+                    return
+
+    # -------------------------------------------------
+    # SELECT
+    # -------------------------------------------------
 
     def select_option(
         self,
@@ -69,16 +93,24 @@ class MainMenuState(State):
         option = self.OPTIONS[index]
 
         if option == "Netplay":
-            self.game.start_host_list()
+
+            self.game.start_netplay()
 
         elif option == "Local Multiplayer":
+
             self.game.start_weapon_select()
 
         elif option == "Game Cards":
+
             self.game.start_card_gallery()
 
         elif option == "Settings":
+
             self.game.start_settings()
+
+    # -------------------------------------------------
+    # UPDATE
+    # -------------------------------------------------
 
     def update(
         self,
@@ -87,9 +119,14 @@ class MainMenuState(State):
         mouse_position = pygame.mouse.get_pos()
 
         for button in self.buttons:
+
             button.update(
                 mouse_position
             )
+
+    # -------------------------------------------------
+    # DRAW
+    # -------------------------------------------------
 
     def draw(
         self,
@@ -115,6 +152,7 @@ class MainMenuState(State):
         )
 
         for button in self.buttons:
+
             button.draw(
                 screen
             )

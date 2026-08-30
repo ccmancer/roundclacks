@@ -1,5 +1,4 @@
 import pygame
-import random
 
 from pathlib import Path
 
@@ -92,14 +91,18 @@ class Bomb(Weapon):
 
         self.start_cooldown()
 
-        # Play throw sound.
         self.throw_sound.play()
 
         spread = self.get_spread()
 
-        offset = random.uniform(
-            -spread,
-            spread
+        offset = (
+            self.player.match.random.uniform(
+                self.player.simulation_frame,
+                self.player.player_number,
+                "bomb_spread",
+                -spread,
+                spread
+            )
         )
 
         direction = (
@@ -138,16 +141,24 @@ class Bomb(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Lethality":
-                damage *= 1.5 ** upgrade.stacks
+                damage *= (
+                    1.5 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Fuse":
-                damage *= 1.75 ** upgrade.stacks
+                damage *= (
+                    1.75 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Direct Hit":
-                damage *= 2 ** upgrade.stacks
+                damage *= (
+                    2 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Nuke":
-                damage *= 2 ** upgrade.stacks
+                damage *= (
+                    2 ** upgrade.stacks
+                )
 
         return damage
 
@@ -156,10 +167,14 @@ class Bomb(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Madness":
-                cooldown *= 0.1 ** upgrade.stacks
+                cooldown *= (
+                    0.1 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Nuke":
-                cooldown *= 2 ** upgrade.stacks
+                cooldown *= (
+                    2 ** upgrade.stacks
+                )
 
         return cooldown
 
@@ -172,7 +187,9 @@ class Bomb(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Fastball":
-                momentum *= 2 ** upgrade.stacks
+                momentum *= (
+                    2 ** upgrade.stacks
+                )
 
         return momentum
 
@@ -182,7 +199,8 @@ class Bomb(Weapon):
         for upgrade in self.upgrades:
             if upgrade.name == "Madness":
                 spread += (
-                    20 * upgrade.stacks
+                    20
+                    * upgrade.stacks
                 )
 
         return spread
@@ -196,16 +214,24 @@ class Bomb(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Gunpowder":
-                radius *= 1.5 ** upgrade.stacks
+                radius *= (
+                    1.5 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Fuse":
-                radius *= 1.75 ** upgrade.stacks
+                radius *= (
+                    1.75 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Direct Hit":
-                radius *= 0.75 ** upgrade.stacks
+                radius *= (
+                    0.75 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Nuke":
-                radius *= 2 ** upgrade.stacks
+                radius *= (
+                    2 ** upgrade.stacks
+                )
 
         return radius
 
@@ -214,10 +240,14 @@ class Bomb(Weapon):
 
         for upgrade in self.upgrades:
             if upgrade.name == "Extra Force":
-                knockback *= 1.5 ** upgrade.stacks
+                knockback *= (
+                    1.5 ** upgrade.stacks
+                )
 
             elif upgrade.name == "Fuse":
-                knockback *= 1.75 ** upgrade.stacks
+                knockback *= (
+                    1.75 ** upgrade.stacks
+                )
 
         return knockback
 
@@ -275,7 +305,8 @@ class Bomb(Weapon):
         for upgrade in self.upgrades:
             if upgrade.name == "Shellshock":
                 duration = (
-                    5 * upgrade.stacks
+                    5
+                    * upgrade.stacks
                 )
 
         return duration
@@ -286,7 +317,8 @@ class Bomb(Weapon):
         for upgrade in self.upgrades:
             if upgrade.name == "Mine":
                 duration = (
-                    5 * upgrade.stacks
+                    5
+                    * upgrade.stacks
                 )
 
         return duration
@@ -297,7 +329,8 @@ class Bomb(Weapon):
         for upgrade in self.upgrades:
             if upgrade.name == "Cluster Bomb":
                 count += (
-                    8 * upgrade.stacks
+                    8
+                    * upgrade.stacks
                 )
 
         return count

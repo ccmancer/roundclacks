@@ -1,4 +1,5 @@
 import random
+
 from upgrades.upgrade import Upgrade
 
 
@@ -9,24 +10,69 @@ RARITY_WEIGHTS = {
 }
 
 
-def get_random_upgrade(upgrades):
-    return random.choices(
+def get_random_upgrade(
+    upgrades,
+    random_source=None,
+    frame=0,
+    player=0,
+    index=0
+):
+    weights = [
+        RARITY_WEIGHTS[
+            upgrade.rarity
+        ]
+        for upgrade in upgrades
+    ]
+
+    # -------------------------------------------------
+    # Local fallback
+    # -------------------------------------------------
+
+    if random_source is None:
+
+        return random.choices(
+            upgrades,
+            weights=weights,
+            k=1
+        )[0]
+
+    # -------------------------------------------------
+    # Deterministic selection
+    # -------------------------------------------------
+
+    return random_source.weighted_choice(
+        frame,
+        player,
+        "upgrade_choice",
         upgrades,
-        weights=[
-            RARITY_WEIGHTS[upgrade.rarity]
-            for upgrade in upgrades
-        ],
-        k=1
-    )[0]
+        weights,
+        index=index
+    )
 
 
-def generate_upgrade_choices(upgrades, amount=3):
+def generate_upgrade_choices(
+    upgrades,
+    amount=3,
+    random_source=None,
+    frame=0,
+    player=0
+):
     choices = []
 
     available_upgrades = upgrades.copy()
 
-    while len(choices) < amount and available_upgrades:
-        upgrade = get_random_upgrade(available_upgrades)
+    while (
+        len(choices) < amount
+        and available_upgrades
+    ):
+
+        upgrade = get_random_upgrade(
+            available_upgrades,
+            random_source,
+            frame,
+            player,
+            index=len(choices)
+        )
 
         choices.append(
             Upgrade(
@@ -36,7 +82,9 @@ def generate_upgrade_choices(upgrades, amount=3):
             )
         )
 
-        available_upgrades.remove(upgrade)
+        available_upgrades.remove(
+            upgrade
+        )
 
     return choices
 

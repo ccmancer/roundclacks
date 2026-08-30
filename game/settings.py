@@ -10,7 +10,9 @@ SETTINGS_FILE = (
 
 
 class GameSettings:
-    def __init__(self):
+    def __init__(
+        self
+    ):
         # -------------------------------------------------
         # Defaults
         # -------------------------------------------------
@@ -34,6 +36,9 @@ class GameSettings:
             0,
             255
         )
+
+        # Set by Game after AudioManager is created.
+        self.audio = None
 
         # -------------------------------------------------
         # Load
@@ -68,41 +73,79 @@ class GameSettings:
 
         self.save()
 
+        self.update_audio()
+
+    # -------------------------------------------------
+    # AUDIO UPDATE
+    # -------------------------------------------------
+
+    def update_audio(self):
+        if self.audio is not None:
+            self.audio.update()
+
     # -------------------------------------------------
     # VOLUME
     # -------------------------------------------------
 
-    def set_master_volume(self, value):
+    def set_master_volume(
+        self,
+        value
+    ):
         self.master_volume = max(
             0,
-            min(1, value)
+            min(
+                1,
+                value
+            )
         )
 
         self.save()
+        self.update_audio()
 
-    def set_game_volume(self, value):
+    def set_game_volume(
+        self,
+        value
+    ):
         self.game_volume = max(
             0,
-            min(1, value)
+            min(
+                1,
+                value
+            )
         )
 
         self.save()
+        self.update_audio()
 
-    def set_ui_volume(self, value):
+    def set_ui_volume(
+        self,
+        value
+    ):
         self.ui_volume = max(
             0,
-            min(1, value)
+            min(
+                1,
+                value
+            )
         )
 
         self.save()
+        self.update_audio()
 
-    def set_music_volume(self, value):
+    def set_music_volume(
+        self,
+        value
+    ):
         self.music_volume = max(
             0,
-            min(1, value)
+            min(
+                1,
+                value
+            )
         )
 
         self.save()
+        self.update_audio()
 
     # -------------------------------------------------
     # SAVE
@@ -138,6 +181,7 @@ class GameSettings:
                 "w",
                 encoding="utf-8"
             ) as file:
+
                 json.dump(
                     data,
                     file,
@@ -145,6 +189,7 @@ class GameSettings:
                 )
 
         except OSError as error:
+
             print(
                 "Could not save settings:",
                 error
@@ -160,17 +205,22 @@ class GameSettings:
             return
 
         try:
+
             with open(
                 SETTINGS_FILE,
                 "r",
                 encoding="utf-8"
             ) as file:
-                data = json.load(file)
+
+                data = json.load(
+                    file
+                )
 
         except (
             OSError,
             json.JSONDecodeError
         ):
+
             print(
                 "Could not load settings. "
                 "Using defaults."
@@ -183,82 +233,124 @@ class GameSettings:
         # Audio
         # -------------------------------------------------
 
-        self.master_volume = self.get_number(
-            data,
-            "master_volume",
-            self.master_volume
+        self.master_volume = (
+            self.get_number(
+                data,
+                "master_volume",
+                self.master_volume
+            )
         )
 
-        self.game_volume = self.get_number(
-            data,
-            "game_volume",
-            self.game_volume
+        self.game_volume = (
+            self.get_number(
+                data,
+                "game_volume",
+                self.game_volume
+            )
         )
 
-        self.ui_volume = self.get_number(
-            data,
-            "ui_volume",
-            self.ui_volume
+        self.ui_volume = (
+            self.get_number(
+                data,
+                "ui_volume",
+                self.ui_volume
+            )
         )
 
-        self.music_volume = self.get_number(
-            data,
-            "music_volume",
-            self.music_volume
+        self.music_volume = (
+            self.get_number(
+                data,
+                "music_volume",
+                self.music_volume
+            )
         )
 
         # -------------------------------------------------
         # Names
         # -------------------------------------------------
 
-        self.player1_name = data.get(
+        player1_name = data.get(
             "player1_name",
             self.player1_name
         )
 
-        self.player2_name = data.get(
+        player2_name = data.get(
             "player2_name",
             self.player2_name
         )
+
+        if isinstance(
+            player1_name,
+            str
+        ) and player1_name.strip():
+
+            self.player1_name = (
+                player1_name.strip()
+            )
+
+        if isinstance(
+            player2_name,
+            str
+        ) and player2_name.strip():
+
+            self.player2_name = (
+                player2_name.strip()
+            )
 
         # -------------------------------------------------
         # Colours
         # -------------------------------------------------
 
-        self.player1_color = self.get_color(
-            data,
-            "player1_color",
-            self.player1_color
+        self.player1_color = (
+            self.get_color(
+                data,
+                "player1_color",
+                self.player1_color
+            )
         )
 
-        self.player2_color = self.get_color(
-            data,
-            "player2_color",
-            self.player2_color
+        self.player2_color = (
+            self.get_color(
+                data,
+                "player2_color",
+                self.player2_color
+            )
         )
 
         # -------------------------------------------------
-        # Keep values valid
+        # Keep volume values valid
         # -------------------------------------------------
 
         self.master_volume = max(
             0,
-            min(1, self.master_volume)
+            min(
+                1,
+                self.master_volume
+            )
         )
 
         self.game_volume = max(
             0,
-            min(1, self.game_volume)
+            min(
+                1,
+                self.game_volume
+            )
         )
 
         self.ui_volume = max(
             0,
-            min(1, self.ui_volume)
+            min(
+                1,
+                self.ui_volume
+            )
         )
 
         self.music_volume = max(
             0,
-            min(1, self.music_volume)
+            min(
+                1,
+                self.music_volume
+            )
         )
 
     # -------------------------------------------------
@@ -282,7 +374,9 @@ class GameSettings:
         ):
             return default
 
-        return float(value)
+        return float(
+            value
+        )
 
     @staticmethod
     def get_color(
@@ -305,6 +399,7 @@ class GameSettings:
             return default
 
         try:
+
             color = tuple(
                 int(component)
                 for component in value
@@ -314,6 +409,7 @@ class GameSettings:
             TypeError,
             ValueError
         ):
+
             return default
 
         if any(

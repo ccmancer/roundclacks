@@ -1,13 +1,13 @@
 {
-    "master_volume": 1.0,
-    "game_volume": 1.0,
-    "ui_volume": 1.0,
-    "music_volume": 1.0,
-    "player1_name": "Player 1",
+    "master_volume": 1,
+    "game_volume": 0.30000000000000016,
+    "ui_volume": 0.30000000000000016,
+    "music_volume": 0.20000000000000015,
+    "player1_name": "booty licker",
     "player2_name": "Player 2",
     "player1_color": [
-        255,
         0,
+        255,
         0
     ],
     "player2_color": [

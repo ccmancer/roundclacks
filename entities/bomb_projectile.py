@@ -1,5 +1,4 @@
 import pygame
-import random
 
 from entities.projectile import Projectile
 from entities.explosion import Explosion
@@ -55,37 +54,60 @@ class BombProjectile(Projectile):
 
         self.fuse_time = fuse_time
 
-        # Mine.
+        # -------------------------------------------------
+        # Mine
+        # -------------------------------------------------
+
         self.mine_duration = mine_duration
         self.mine_timer = mine_duration
+
         self.is_mine = (
             mine_duration > 0
         )
+
         self.stuck_to_border = False
         self.should_explode = False
 
-        # Cluster Bomb.
+        # -------------------------------------------------
+        # Cluster Bomb
+        # -------------------------------------------------
+
         self.cluster_count = cluster_count
         self.cluster_child = cluster_child
         self.cluster_timer = cluster_delay
 
-        # Nuke.
+        # -------------------------------------------------
+        # Nuke
+        # -------------------------------------------------
+
         self.pool_damage = pool_damage
 
-        # Pyromaniac.
+        # -------------------------------------------------
+        # Pyromaniac
+        # -------------------------------------------------
+
         self.pyromaniac_heal = pyromaniac_heal
 
-        # Shellshock.
+        # -------------------------------------------------
+        # Shellshock
+        # -------------------------------------------------
+
         self.shellshock_duration = (
             shellshock_duration
         )
 
-        # Earthlight Ray.
+        # -------------------------------------------------
+        # Earthlight Ray
+        # -------------------------------------------------
+
         self.earthlight_ray_damage = (
             earthlight_ray_damage
         )
 
-        # Chaos Bomb.
+        # -------------------------------------------------
+        # Chaos Bomb
+        # -------------------------------------------------
+
         self.chaos_damage = chaos_damage
         self.chaos_size = chaos_size
 
@@ -95,6 +117,7 @@ class BombProjectile(Projectile):
 
     def update(self, dt):
         if self.cluster_child:
+
             self.position += (
                 self.velocity * dt
             )
@@ -107,11 +130,13 @@ class BombProjectile(Projectile):
             return
 
         if self.stuck_to_border:
+
             self.mine_timer -= dt
 
             opponent = self.owner.opponent
 
             if opponent is not None:
+
                 distance = (
                     self.position.distance_to(
                         opponent.position
@@ -260,27 +285,57 @@ class BombProjectile(Projectile):
             self.cluster_count > 0
             and not self.cluster_child
         ):
-            for _ in range(
+
+            frame = (
+                self.owner.simulation_frame
+            )
+
+            player_number = (
+                self.owner.player_number
+            )
+
+            for i in range(
                 self.cluster_count
             ):
+
+                angle = (
+                    self.owner.match.random.uniform(
+                        frame,
+                        player_number,
+                        "cluster_direction",
+                        0,
+                        360,
+                        index=i
+                    )
+                )
+
                 direction = pygame.Vector2(
                     1,
                     0
                 ).rotate(
-                    random.uniform(
-                        0,
-                        360
+                    angle
+                )
+
+                fragment_speed = (
+                    self.owner.match.random.uniform(
+                        frame,
+                        player_number,
+                        "cluster_speed",
+                        self.blast_radius * 2,
+                        self.blast_radius * 4,
+                        index=i
                     )
                 )
 
-                fragment_speed = random.uniform(
-                    self.blast_radius * 2,
-                    self.blast_radius * 4
-                )
-
-                fragment_delay = random.uniform(
-                    0.15,
-                    0.4
+                fragment_delay = (
+                    self.owner.match.random.uniform(
+                        frame,
+                        player_number,
+                        "cluster_delay",
+                        0.15,
+                        0.4,
+                        index=i
+                    )
                 )
 
                 spawned.append(

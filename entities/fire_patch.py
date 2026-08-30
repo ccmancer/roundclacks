@@ -11,6 +11,7 @@ SPRITE_FOLDER = (
 
 
 class FirePatch:
+
     def __init__(
         self,
         position,
@@ -27,19 +28,44 @@ class FirePatch:
         self.damage = damage
         self.owner = owner
 
-        # Gameplay hitbox.
+        # -------------------------------------------------
+        # Gameplay
+        # -------------------------------------------------
+
         self.radius = radius
 
         self.duration = duration
         self.timer = duration
 
         self.tick_interval = tick_interval
+
+        # -------------------------------------------------
+        # Damage timers
+        # -------------------------------------------------
+        #
+        # Store player numbers instead of Player objects.
+        # This avoids object identity affecting rollback.
+        #
+        # Example:
+        #
+        #     {1: 0.1}
+        #
+        # rather than:
+        #
+        #     {player_object: 0.1}
+        #
+        # -------------------------------------------------
+
         self.damage_timers = {}
 
         self.alive = True
 
         self.can_hit_owner = False
         self.is_fire_patch = True
+
+        # -------------------------------------------------
+        # Sprite
+        # -------------------------------------------------
 
         self.sprite = pygame.image.load(
             SPRITE_FOLDER / "fire_patch.png"
@@ -49,23 +75,34 @@ class FirePatch:
     # UPDATE
     # -------------------------------------------------
 
-    def update(self, dt):
+    def update(
+        self,
+        dt
+    ):
         self.timer -= dt
 
         if self.timer <= 0:
+
             self.alive = False
+
             return
 
-        for player in list(
+        for player_number in list(
             self.damage_timers
         ):
-            self.damage_timers[player] -= dt
+
+            self.damage_timers[
+                player_number
+            ] -= dt
 
     # -------------------------------------------------
     # DRAW
     # -------------------------------------------------
 
-    def draw(self, screen):
+    def draw(
+        self,
+        screen
+    ):
         fade = max(
             0,
             self.timer / self.duration
@@ -73,18 +110,25 @@ class FirePatch:
 
         size = max(
             1,
-            int(self.radius * 2)
+            int(
+                self.radius * 2
+            )
         )
 
         sprite = pygame.transform.scale(
             self.sprite,
-            (size, size)
+            (
+                size,
+                size
+            )
         )
 
         sprite = sprite.copy()
 
         sprite.set_alpha(
-            int(255 * fade)
+            int(
+                255 * fade
+            )
         )
 
         rect = sprite.get_rect(
@@ -100,35 +144,91 @@ class FirePatch:
     # HITBOX
     # -------------------------------------------------
 
-    def get_hitbox_radius(self):
+    def get_hitbox_radius(
+        self
+    ):
         return self.radius
+
+    # -------------------------------------------------
+    # PLAYER NUMBER
+    # -------------------------------------------------
+
+    @staticmethod
+    def get_player_number(
+        player
+    ):
+        player_number = getattr(
+            player,
+            "player_number",
+            None
+        )
+
+        if player_number in (
+            1,
+            2
+        ):
+            return player_number
+
+        return None
 
     # -------------------------------------------------
     # HIT
     # -------------------------------------------------
 
-    def hit(self, player):
+    def hit(
+        self,
+        player
+    ):
+        # -------------------------------------------------
+        # Owner
+        # -------------------------------------------------
+
         if player == self.owner:
+
             return []
 
-        if player not in self.damage_timers:
+        player_number = (
+            self.get_player_number(
+                player
+            )
+        )
+
+        if player_number is None:
+
+            return []
+
+        # -------------------------------------------------
+        # First hit
+        # -------------------------------------------------
+
+        if player_number not in self.damage_timers:
+
             player.take_damage(
                 self.damage
             )
 
-            self.damage_timers[player] = (
-                self.tick_interval
-            )
+            self.damage_timers[
+                player_number
+            ] = self.tick_interval
 
             return []
 
-        if self.damage_timers[player] <= 0:
+        # -------------------------------------------------
+        # Damage tick
+        # -------------------------------------------------
+
+        if (
+            self.damage_timers[
+                player_number
+            ] <= 0
+        ):
+
             player.take_damage(
                 self.damage
             )
 
-            self.damage_timers[player] = (
-                self.tick_interval
-            )
+            self.damage_timers[
+                player_number
+            ] = self.tick_interval
 
         return []

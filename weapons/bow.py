@@ -1,6 +1,5 @@
 import pygame
 import math
-import random
 from pathlib import Path
 
 from weapons.weapon import Weapon
@@ -31,7 +30,7 @@ class Bow(Weapon):
             50,
             3,
             20,
-            2.0,          # 2 second base cooldown
+            2.0,
             False,
             "bow.png",
             80,
@@ -132,6 +131,9 @@ class Bow(Weapon):
         if self.cooldown_timer > 0:
             self.cooldown_timer -= dt
 
+            if self.cooldown_timer < 0:
+                self.cooldown_timer = 0
+
         self.angle += (
             self.get_rotation_speed()
             * dt
@@ -197,9 +199,14 @@ class Bow(Weapon):
         else:
             spread = self.get_spread()
 
-            offset = random.uniform(
-                -spread,
-                spread
+            offset = (
+                self.player.match.random.uniform(
+                    self.player.simulation_frame,
+                    self.player.player_number,
+                    "bow_spread",
+                    -spread,
+                    spread
+                )
             )
 
             direction = (

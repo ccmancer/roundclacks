@@ -1,4 +1,3 @@
-import random
 import pygame
 from pathlib import Path
 
@@ -16,7 +15,11 @@ SOUND_FOLDER = (
 
 
 class Unarmed(Weapon):
-    def __init__(self, player):
+
+    def __init__(
+        self,
+        player
+    ):
         super().__init__(
             player,
             0,
@@ -32,12 +35,16 @@ class Unarmed(Weapon):
         # Sounds
         # -------------------------------------------------
 
-        self.dash_sound = self.player.game.audio.load_game_sound(
-            SOUND_FOLDER / "unarmed_dash.mp3"
+        self.dash_sound = (
+            self.player.game.audio.load_game_sound(
+                SOUND_FOLDER / "unarmed_dash.mp3"
+            )
         )
 
-        self.teleport_sound = self.player.game.audio.load_game_sound(
-            SOUND_FOLDER / "unarmed_teleport.mp3"
+        self.teleport_sound = (
+            self.player.game.audio.load_game_sound(
+                SOUND_FOLDER / "unarmed_teleport.mp3"
+            )
         )
 
         # -------------------------------------------------
@@ -45,13 +52,32 @@ class Unarmed(Weapon):
         # -------------------------------------------------
 
         self.attack_timer = 0
+
+        # Normal Unarmed hit tracking.
         self.hit_players = set()
 
         self.attack_distance = 0
+
         self.last_position = (
             self.player.position.copy()
         )
+
         self.hit_reset_distance = 50
+
+        # -------------------------------------------------
+        # Tunnel Effect hit tracking
+        # -------------------------------------------------
+        #
+        # A Tunnel Effect pass can remain in contact with
+        # the opponent for many frames. Keep a separate set
+        # so travelling a long distance cannot reset the
+        # ability to hit that same opponent.
+        #
+        # The entry is removed when the two players separate,
+        # allowing a new pass-through to hit again.
+        # -------------------------------------------------
+
+        self.tunnel_hit_players = set()
 
         # -------------------------------------------------
         # PAC-MAN
@@ -71,9 +97,11 @@ class Unarmed(Weapon):
         # -------------------------------------------------
 
         self.fire_trail_distance = 0
+
         self.last_fire_position = (
             self.player.position.copy()
         )
+
         self.spawned_entities = []
 
         # -------------------------------------------------
@@ -87,8 +115,10 @@ class Unarmed(Weapon):
         # -------------------------------------------------
 
         self.afterimages = []
+
         self.afterimage_spacing = 15
         self.afterimage_distance = 0
+
         self.last_afterimage_position = (
             self.player.position.copy()
         )
@@ -97,9 +127,12 @@ class Unarmed(Weapon):
     # UPDATE / DRAW
     # -------------------------------------------------
 
-    def update(self, dt):
-        # Weapon cooldown.
+    def update(
+        self,
+        dt
+    ):
         if self.cooldown_timer > 0:
+
             self.cooldown_timer -= dt
 
             if self.cooldown_timer < 0:
@@ -110,6 +143,7 @@ class Unarmed(Weapon):
         attacking = self.is_attacking()
 
         if attacking:
+
             current_position = (
                 self.player.position
             )
@@ -127,16 +161,30 @@ class Unarmed(Weapon):
                 current_position.copy()
             )
 
-            # Allow another hit after enough movement.
+            # -------------------------------------------------
+            # Normal attack hit reset
+            # -------------------------------------------------
+            #
+            # Do NOT clear tunnel_hit_players here.
+            # Tunnel Effect has its own separation-based
+            # reset.
+            # -------------------------------------------------
+
             if (
                 self.attack_distance
                 >= self.hit_reset_distance
             ):
+
                 self.hit_players.clear()
+
                 self.attack_distance = 0
 
-            # Blazing Fast.
+            # -------------------------------------------------
+            # Blazing Fast
+            # -------------------------------------------------
+
             if self.has_blazing_fast():
+
                 self.spawn_fire_trail(
                     current_position,
                     movement,
@@ -146,24 +194,29 @@ class Unarmed(Weapon):
             self.attack_timer -= dt
 
             # -------------------------------------------------
-            # Attack ends -> cooldown begins
+            # Attack ends -> cooldown
             # -------------------------------------------------
 
             if self.attack_timer <= 0:
+
                 self.attack_timer = 0
 
-                # Cooldown always starts AFTER the attack.
                 self.start_cooldown()
 
                 self.hit_players.clear()
+
+                self.tunnel_hit_players.clear()
+
                 self.attack_distance = 0
 
                 self.pacman_speed_stacks = 0
 
                 self.tunnel_speed_stacks = 0
+
                 self.tunnel_contact_players.clear()
 
                 self.fire_trail_distance = 0
+
                 self.last_fire_position = (
                     self.player.position.copy()
                 )
@@ -171,36 +224,54 @@ class Unarmed(Weapon):
                 self.meteor_speed_stacks = 0
 
                 self.afterimage_distance = 0
+
                 self.last_afterimage_position = (
                     self.player.position.copy()
                 )
 
         else:
+
             self.last_position = (
                 self.player.position.copy()
             )
 
             self.fire_trail_distance = 0
+
             self.last_fire_position = (
                 self.player.position.copy()
             )
 
             self.tunnel_contact_players.clear()
 
+            # Outside an attack there cannot be an active
+            # Tunnel Effect hit relationship.
+
+            self.tunnel_hit_players.clear()
+
             self.afterimage_distance = 0
+
             self.last_afterimage_position = (
                 self.player.position.copy()
             )
 
         if attacking:
+
             self.update_afterimages()
+
         else:
+
             self.afterimage_distance = 0
 
-        self.remove_expired_afterimages(dt)
+        self.remove_expired_afterimages(
+            dt
+        )
 
-    def draw_before_player(self, screen):
+    def draw_before_player(
+        self,
+        screen
+    ):
         for afterimage in self.afterimages:
+
             sprite = afterimage["sprite"].copy()
 
             sprite.set_alpha(
@@ -220,7 +291,10 @@ class Unarmed(Weapon):
     # PLAYER SPRITE
     # -------------------------------------------------
 
-    def modify_player_sprite(self, sprite):
+    def modify_player_sprite(
+        self,
+        sprite
+    ):
         return self.apply_ready_glow(
             sprite,
             self.get_ready_glow_strength()
@@ -230,14 +304,22 @@ class Unarmed(Weapon):
     # PLAYER INTERACTION
     # -------------------------------------------------
 
-    def modify_incoming_damage(self, damage):
-        damage = super().modify_incoming_damage(
-            damage
+    def modify_incoming_damage(
+        self,
+        damage
+    ):
+        damage = (
+            super().modify_incoming_damage(
+                damage
+            )
         )
 
         if self.is_attacking():
+
             for upgrade in self.upgrades:
+
                 if upgrade.name == "Superarmor":
+
                     damage *= (
                         0.5 ** upgrade.stacks
                     )
@@ -250,10 +332,12 @@ class Unarmed(Weapon):
         height
     ):
         if self.is_pacman_active():
+
             self.handle_pacman_bounds(
                 width,
                 height
             )
+
             return
 
         super().handle_player_bounds(
@@ -271,10 +355,8 @@ class Unarmed(Weapon):
         height=None
     ):
         if not self.can_attack():
-            return []
 
-        # Do NOT start cooldown here.
-        # Cooldown starts when the attack ends.
+            return []
 
         self.dash_sound.play()
 
@@ -284,7 +366,10 @@ class Unarmed(Weapon):
 
         self.hit_players.clear()
 
+        self.tunnel_hit_players.clear()
+
         self.attack_distance = 0
+
         self.last_position = (
             self.player.position.copy()
         )
@@ -292,9 +377,11 @@ class Unarmed(Weapon):
         self.pacman_speed_stacks = 0
 
         self.tunnel_speed_stacks = 0
+
         self.tunnel_contact_players.clear()
 
         self.fire_trail_distance = 0
+
         self.last_fire_position = (
             self.player.position.copy()
         )
@@ -304,6 +391,7 @@ class Unarmed(Weapon):
         self.spawned_entities = []
 
         self.afterimage_distance = 0
+
         self.last_afterimage_position = (
             self.player.position.copy()
         )
@@ -317,6 +405,7 @@ class Unarmed(Weapon):
             and width is not None
             and height is not None
         ):
+
             self.do_meteor_teleport(
                 width,
                 height
@@ -330,20 +419,68 @@ class Unarmed(Weapon):
 
         return []
 
-    def is_attacking(self):
+    def is_attacking(
+        self
+    ):
         return self.attack_timer > 0
 
-    def can_hit(self, opponent):
+    def can_hit(
+        self,
+        opponent
+    ):
+        if not self.is_attacking():
+
+            return False
+
+        # -------------------------------------------------
+        # Tunnel Effect
+        # -------------------------------------------------
+        #
+        # Only one hit per continuous contact/pass-through.
+        # Separation removes the opponent from the set.
+        # -------------------------------------------------
+
+        if self.is_tunnel_effect():
+
+            return (
+                opponent
+                not in self.tunnel_hit_players
+            )
+
+        # -------------------------------------------------
+        # Normal Unarmed
+        # -------------------------------------------------
+
         return (
-            self.is_attacking()
-            and opponent not in self.hit_players
+            opponent
+            not in self.hit_players
         )
 
-    def hit(self, opponent):
-        if not self.can_hit(opponent):
+    def hit(
+        self,
+        opponent
+    ):
+        if not self.can_hit(
+            opponent
+        ):
+
             return
 
-        self.hit_players.add(opponent)
+        # -------------------------------------------------
+        # Tunnel Effect
+        # -------------------------------------------------
+
+        if self.is_tunnel_effect():
+
+            self.tunnel_hit_players.add(
+                opponent
+            )
+
+        else:
+
+            self.hit_players.add(
+                opponent
+            )
 
         opponent.take_damage(
             self.get_damage()
@@ -354,12 +491,13 @@ class Unarmed(Weapon):
         # -------------------------------------------------
 
         if self.get_raging_demon_stacks() > 0:
+
             self.attack_timer = (
                 self.get_attack_duration()
             )
 
         # -------------------------------------------------
-        # Tunnel Effect
+        # Tunnel Effect speed
         # -------------------------------------------------
 
         if (
@@ -367,6 +505,7 @@ class Unarmed(Weapon):
             and opponent
             not in self.tunnel_contact_players
         ):
+
             self.tunnel_contact_players.add(
                 opponent
             )
@@ -377,23 +516,33 @@ class Unarmed(Weapon):
     # DAMAGE
     # -------------------------------------------------
 
-    def get_damage(self):
+    def get_damage(
+        self
+    ):
         damage = self.base_damage
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "Slugger":
+
                 damage *= (
                     1.5 ** upgrade.stacks
                 )
 
             elif upgrade.name == "Cannonball":
+
                 damage *= (
                     2 ** upgrade.stacks
                 )
 
-        # Momentum.
+        # -------------------------------------------------
+        # Momentum
+        # -------------------------------------------------
+
         for upgrade in self.upgrades:
+
             if upgrade.name == "Momentum":
+
                 normal_attack_speed = (
                     self.player.speed
                     * 1.5
@@ -423,117 +572,134 @@ class Unarmed(Weapon):
     # PLAYER STATS
     # -------------------------------------------------
 
-    def get_radius_multiplier(self):
+    def get_radius_multiplier(
+        self
+    ):
         multiplier = (
             super().get_radius_multiplier()
         )
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "Cannonball":
+
                 multiplier *= (
                     1.25 ** upgrade.stacks
                 )
 
             elif upgrade.name == "Brute":
+
                 multiplier *= (
                     1.25 ** upgrade.stacks
                 )
 
         return multiplier
 
-    def get_speed_multiplier(self):
+    def get_speed_multiplier(
+        self
+    ):
         multiplier = (
             super().get_speed_multiplier()
         )
 
-        # Unarmed is naturally faster.
         multiplier *= 1.5
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "Footwork":
+
                 multiplier *= (
                     1.5 ** upgrade.stacks
                 )
 
             elif upgrade.name == "Marathon Runner":
+
                 multiplier *= (
                     0.75 ** upgrade.stacks
                 )
 
             elif upgrade.name == "Cannonball":
+
                 multiplier *= (
                     0.75 ** upgrade.stacks
                 )
 
         if not self.is_attacking():
+
             return multiplier
 
-        # Base attack burst.
         multiplier *= 3
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "Sprinter":
+
                 multiplier *= (
                     2 ** upgrade.stacks
                 )
 
             elif upgrade.name == "Raging Demon":
-                # +100% speed per stack.
+
                 multiplier *= (
                     2 ** upgrade.stacks
                 )
 
-        # PAC-MAN.
         multiplier *= (
             self.get_pacman_speed_multiplier()
         )
 
-        # Tunnel Effect.
         multiplier *= (
             self.get_tunnel_speed_multiplier()
         )
 
-        # Instant Transmission.
         multiplier *= (
             self.get_meteor_speed_multiplier()
         )
 
         return multiplier
 
-    def get_attack_cooldown(self):
-        # This is the cooldown AFTER the attack ends.
+    def get_attack_cooldown(
+        self
+    ):
         downtime = self.base_cooldown
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "Hyperactive":
+
                 downtime *= (
                     0.5 ** upgrade.stacks
                 )
 
             elif upgrade.name == "Raging Demon":
-                # +50% cooldown per stack.
+
                 downtime *= (
                     1.5 ** upgrade.stacks
                 )
 
         return downtime
 
-    def get_attack_duration(self):
+    def get_attack_duration(
+        self
+    ):
         duration = 0.4
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "Endurance":
+
                 duration *= (
                     1.5 ** upgrade.stacks
                 )
 
             elif upgrade.name == "Marathon Runner":
+
                 duration *= (
                     3 ** upgrade.stacks
                 )
 
             elif upgrade.name == "Raging Demon":
-                # +100% duration per stack.
+
                 duration *= (
                     2 ** upgrade.stacks
                 )
@@ -544,11 +710,15 @@ class Unarmed(Weapon):
     # RAGING DEMON
     # -------------------------------------------------
 
-    def get_raging_demon_stacks(self):
+    def get_raging_demon_stacks(
+        self
+    ):
         stacks = 0
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "Raging Demon":
+
                 stacks += upgrade.stacks
 
         return stacks
@@ -557,12 +727,17 @@ class Unarmed(Weapon):
     # PAC-MAN
     # -------------------------------------------------
 
-    def is_pacman_active(self):
+    def is_pacman_active(
+        self
+    ):
         if not self.is_attacking():
+
             return False
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "PAC-MAN":
+
                 return True
 
         return False
@@ -578,36 +753,55 @@ class Unarmed(Weapon):
 
         wrapped = False
 
-        # Left -> right.
+        # -------------------------------------------------
+        # Left -> right
+        # -------------------------------------------------
+
         if self.player.position.x + radius < 0:
+
             self.player.position.x = (
                 width + radius
             )
+
             wrapped = True
 
         elif self.player.position.x - radius > width:
+
             self.player.position.x = -radius
+
             wrapped = True
 
-        # Top -> bottom.
+        # -------------------------------------------------
+        # Top -> bottom
+        # -------------------------------------------------
+
         if self.player.position.y + radius < 0:
+
             self.player.position.y = (
                 height + radius
             )
+
             wrapped = True
 
         elif self.player.position.y - radius > height:
+
             self.player.position.y = -radius
+
             wrapped = True
 
         if wrapped:
+
             self.pacman_speed_stacks += 1
 
-    def get_pacman_speed_multiplier(self):
+    def get_pacman_speed_multiplier(
+        self
+    ):
         stacks = 0
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "PAC-MAN":
+
                 stacks += upgrade.stacks
 
         return (
@@ -621,18 +815,26 @@ class Unarmed(Weapon):
     # TUNNEL EFFECT
     # -------------------------------------------------
 
-    def is_tunnel_effect(self):
+    def is_tunnel_effect(
+        self
+    ):
         for upgrade in self.upgrades:
+
             if upgrade.name == "Tunnel Effect":
+
                 return True
 
         return False
 
-    def get_tunnel_speed_multiplier(self):
+    def get_tunnel_speed_multiplier(
+        self
+    ):
         stacks = 0
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "Tunnel Effect":
+
                 stacks += upgrade.stacks
 
         return (
@@ -642,8 +844,20 @@ class Unarmed(Weapon):
             * self.tunnel_speed_stacks
         )
 
-    def on_tunnel_separation(self, opponent):
+    def on_tunnel_separation(
+        self,
+        opponent
+    ):
+        # -------------------------------------------------
+        # The opponent can be hit again on a new
+        # pass-through after physical separation.
+        # -------------------------------------------------
+
         self.tunnel_contact_players.discard(
+            opponent
+        )
+
+        self.tunnel_hit_players.discard(
             opponent
         )
 
@@ -651,23 +865,33 @@ class Unarmed(Weapon):
     # INSTANT TRANSMISSION
     # -------------------------------------------------
 
-    def is_meteor_combo(self):
+    def is_meteor_combo(
+        self
+    ):
         for upgrade in self.upgrades:
+
             if upgrade.name == "Instant Transmission":
+
                 return True
 
         return False
 
-    def get_meteor_stacks(self):
+    def get_meteor_stacks(
+        self
+    ):
         stacks = 0
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "Instant Transmission":
+
                 stacks += upgrade.stacks
 
         return stacks
 
-    def get_meteor_speed_multiplier(self):
+    def get_meteor_speed_multiplier(
+        self
+    ):
         return (
             1
             + 0.5
@@ -679,23 +903,44 @@ class Unarmed(Weapon):
         width,
         height
     ):
-        opponent = self.player.opponent
+        opponent = (
+            self.player.opponent
+        )
 
         if opponent is None:
+
             return
 
         margin = (
             self.player.get_hitbox_radius()
         )
 
-        self.player.position.x = random.uniform(
-            margin,
-            width - margin
+        frame = (
+            self.player.simulation_frame
         )
 
-        self.player.position.y = random.uniform(
-            margin,
-            height - margin
+        player_number = (
+            self.player.player_number
+        )
+
+        self.player.position.x = (
+            self.player.match.random.uniform(
+                frame,
+                player_number,
+                "instant_transmission_x",
+                margin,
+                width - margin
+            )
+        )
+
+        self.player.position.y = (
+            self.player.match.random.uniform(
+                frame,
+                player_number,
+                "instant_transmission_y",
+                margin,
+                height - margin
+            )
         )
 
         direction = (
@@ -704,6 +949,7 @@ class Unarmed(Weapon):
         )
 
         if direction.length_squared() > 0:
+
             self.player.velocity = (
                 direction.normalize()
                 * self.player.get_speed()
@@ -713,47 +959,65 @@ class Unarmed(Weapon):
     # HIT / FIRE
     # -------------------------------------------------
 
-    def has_blazing_fast(self):
+    def has_blazing_fast(
+        self
+    ):
         for upgrade in self.upgrades:
+
             if upgrade.name == "Blazing Fast":
+
                 return True
 
         return False
 
-    def get_blazing_fast_stacks(self):
+    def get_blazing_fast_stacks(
+        self
+    ):
         stacks = 0
 
         for upgrade in self.upgrades:
+
             if upgrade.name == "Blazing Fast":
+
                 stacks += upgrade.stacks
 
         return stacks
 
-    def get_fire_damage(self):
+    def get_fire_damage(
+        self
+    ):
         return 0.5
 
-    def get_fire_size(self):
+    def get_fire_size(
+        self
+    ):
         return (
             20
             * 1.5
             ** self.get_blazing_fast_stacks()
         )
 
-    def get_fire_duration(self):
+    def get_fire_duration(
+        self
+    ):
         return (
             0.5
             * 1.5
             ** self.get_blazing_fast_stacks()
         )
 
-    def get_fire_tick_interval(self):
+    def get_fire_tick_interval(
+        self
+    ):
         return (
             0.1
             * 0.5
             ** self.get_blazing_fast_stacks()
         )
 
-    def get_fire_spacing(self):
+    def get_fire_spacing(
+        self
+    ):
         return 20
 
     def spawn_fire_trail(
@@ -763,6 +1027,7 @@ class Unarmed(Weapon):
         distance
     ):
         if distance <= 0:
+
             return
 
         fire_spacing = (
@@ -784,6 +1049,7 @@ class Unarmed(Weapon):
             + remaining_distance
             >= fire_spacing
         ):
+
             needed_distance = (
                 fire_spacing
                 - self.fire_trail_distance
@@ -811,6 +1077,7 @@ class Unarmed(Weapon):
             )
 
             start_position = patch_position
+
             self.fire_trail_distance = 0
 
         self.fire_trail_distance += (
@@ -825,7 +1092,9 @@ class Unarmed(Weapon):
     # AFTERIMAGES
     # -------------------------------------------------
 
-    def update_afterimages(self):
+    def update_afterimages(
+        self
+    ):
         current_position = (
             self.player.position
         )
@@ -838,6 +1107,7 @@ class Unarmed(Weapon):
         distance = movement.length()
 
         if distance <= 0:
+
             return
 
         self.afterimage_distance += distance
@@ -850,6 +1120,7 @@ class Unarmed(Weapon):
             self.afterimage_distance
             >= self.afterimage_spacing
         ):
+
             overshoot = (
                 self.afterimage_distance
                 - self.afterimage_spacing
@@ -862,8 +1133,12 @@ class Unarmed(Weapon):
             )
 
             self.afterimages.append({
-                "position": spawn_position.copy(),
-                "sprite": self.player.get_sprite().copy(),
+                "position": (
+                    spawn_position.copy()
+                ),
+                "sprite": (
+                    self.player.get_sprite().copy()
+                ),
                 "alpha": 140,
                 "timer": 0.18
             })
@@ -876,8 +1151,12 @@ class Unarmed(Weapon):
             current_position.copy()
         )
 
-    def remove_expired_afterimages(self, dt):
+    def remove_expired_afterimages(
+        self,
+        dt
+    ):
         for afterimage in self.afterimages:
+
             afterimage["timer"] -= dt
 
             afterimage["alpha"] = max(
@@ -901,13 +1180,22 @@ class Unarmed(Weapon):
     # RESET
     # -------------------------------------------------
 
-    def reset(self):
-        super().reset()
+    def reset(
+        self,
+        rng=None
+    ):
+        super().reset(
+            rng
+        )
 
         self.attack_timer = 0
+
         self.hit_players.clear()
 
+        self.tunnel_hit_players.clear()
+
         self.attack_distance = 0
+
         self.last_position = (
             self.player.position.copy()
         )
@@ -915,9 +1203,11 @@ class Unarmed(Weapon):
         self.pacman_speed_stacks = 0
 
         self.tunnel_speed_stacks = 0
+
         self.tunnel_contact_players.clear()
 
         self.fire_trail_distance = 0
+
         self.last_fire_position = (
             self.player.position.copy()
         )
@@ -927,7 +1217,9 @@ class Unarmed(Weapon):
         self.spawned_entities = []
 
         self.afterimages = []
+
         self.afterimage_distance = 0
+
         self.last_afterimage_position = (
             self.player.position.copy()
         )

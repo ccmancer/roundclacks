@@ -19,14 +19,14 @@ class Sword(Weapon):
     def __init__(self, player):
         super().__init__(
             player,
-            100,    # orbit distance
-            3,      # base rotation speed
-            20,     # base damage
-            2.0,    # base cooldown
+            100,
+            3,
+            20,
+            2.0,
             True,
             "sword.png",
-            140,    # sprite length
-            140     # sprite width
+            140,
+            140
         )
 
         # -------------------------------------------------
@@ -73,7 +73,6 @@ class Sword(Weapon):
         # Cooldown
         # -------------------------------------------------
 
-        # Beyblade has no cooldown whatsoever.
         if self.has_beyblade():
             self.cooldown_timer = 0
 
@@ -121,7 +120,6 @@ class Sword(Weapon):
                 self.attacking = False
                 self.attack_angle = 0
 
-                # Beyblade never starts a cooldown.
                 if not self.has_beyblade():
                     self.start_cooldown()
 
@@ -417,7 +415,6 @@ class Sword(Weapon):
         return speed
 
     def get_attack_cooldown(self):
-        # Beyblade has zero cooldown unconditionally.
         if self.has_beyblade():
             return 0
 
@@ -505,8 +502,6 @@ class Sword(Weapon):
     def hit(self, player):
         self.hit_angle = 0
 
-        # Beyblade's on-hit effect:
-        # gain a temporary 25% spin-speed buff.
         self.trigger_beyblade()
 
         damage = self.get_damage()
@@ -594,7 +589,6 @@ class Sword(Weapon):
         if not self.has_beyblade():
             return
 
-        # Each Beyblade stack gives one buff per hit.
         stacks = 0
 
         for upgrade in self.upgrades:
@@ -641,8 +635,13 @@ class Sword(Weapon):
     # RESET
     # -------------------------------------------------
 
-    def reset(self):
-        super().reset()
+    def reset(
+        self,
+        rng=None
+    ):
+        super().reset(
+            rng
+        )
 
         self.attacking = False
         self.attack_angle = 0
@@ -653,7 +652,5 @@ class Sword(Weapon):
 
         self.beyblade_buffs = []
 
-        # Make absolutely sure a Beyblade sword
-        # starts with zero cooldown.
         if self.has_beyblade():
             self.cooldown_timer = 0
